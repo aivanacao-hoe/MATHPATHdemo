@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MathPath</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js"></script>
+</head>
+<body>
+
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div id="screen-login" class="screen">
+  <div class="login-container">
+    <h2>MathPath</h2>
+    <input id="login-email" type="email" placeholder="Email" autocomplete="username">
+    <input id="login-password" type="password" placeholder="Password" autocomplete="current-password">
+    <div class="login-buttons">
+      <button id="login-btn">Log In</button>
+      <button id="register-btn">Register</button>
+    </div>
+    <p id="login-error" class="feedback"></p>
+  </div>
+</div>
+
+<!-- ===================== HOME / DASHBOARD ===================== -->
+<div id="screen-home" class="screen">
+  <div class="home-layout">
+
+    <header class="home-header">
+      <div class="brand">
+        <span class="brand-glyph">∑</span>
+        <div>
+          <div class="brand-name">MathPath</div>
+          <div class="brand-sub">Adaptive Mathematics</div>
+        </div>
+      </div>
+      <!-- show current user and logout on all main screens -->
+      <div class="user-info">Not logged in</div>
+      <button class="logout-btn btn-back" style="display:none;">Log out</button>
+    </header>
+
+    <div class="home-body">
+
+      <!-- Mastery Panel -->
+      <div class="mastery-card">
+        <div class="mastery-card-title">Mastery Progress</div>
+        <div class="mastery-rows">
+          <div class="mrow">
+            <div class="mrow-left">
+              <span class="micon">＋</span>
+              <span class="mlabel">Arithmetic</span>
+            </div>
+            <div class="progress-bar"><div id="bar-arithmetic" class="pb-fill"></div></div>
+            <span id="pct-arithmetic" class="mpct">0%</span>
+          </div>
+          <div class="mrow">
+            <div class="mrow-left">
+              <span class="micon">𝑥</span>
+              <span class="mlabel">Algebra</span>
+            </div>
+            <div class="progress-bar"><div id="bar-algebra" class="pb-fill"></div></div>
+            <span id="pct-algebra" class="mpct">0%</span>
+          </div>
+          <div class="mrow">
+            <div class="mrow-left">
+              <span class="micon">△</span>
+              <span class="mlabel">Geometry</span>
+            </div>
+            <div class="progress-bar"><div id="bar-geometry" class="pb-fill"></div></div>
+            <span id="pct-geometry" class="mpct">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagnostic -->
+      <button id="diag-btn" class="btn-diag" onclick="startDiagnostic()">▶  Take Diagnostic Test</button>
+
+      <!-- Topic Buttons -->
+      <div class="topic-grid">
+        <button class="topic-btn" onclick="goToPractice('arithmetic')">
+          <span class="tbig">＋</span>
+          <strong>Arithmetic</strong>
+          <small>Order of operations, expressions</small>
+        </button>
+        <button class="topic-btn" onclick="goToPractice('algebra')">
+          <span class="tbig">𝑥</span>
+          <strong>Algebra</strong>
+          <small>Equations and expressions</small>
+        </button>
+        <button class="topic-btn" onclick="goToPractice('geometry')">
+          <span class="tbig">△</span>
+          <strong>Geometry</strong>
+          <small>Shapes, area, perimeter</small>
+        </button>
+      </div>
+
+
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DIAGNOSTIC ===================== -->
+<div id="screen-diag" class="screen hidden">
+  <div class="diag-layout">
+
+    <div class="diag-topbar">
+      <button class="btn-back" onclick="goHome()">← Back</button>
+      <div class="diag-center-info">
+        <span class="screen-label">Diagnostic Test</span>
+        <span id="diag-counter" class="counter-pill">1 / 15</span>
+      </div>
+      <div style="width:80px"></div>
+    </div>
+
+    <div class="diag-prog-wrap">
+      <div class="diag-prog-bar"><div id="diag-prog" class="diag-prog-fill"></div></div>
+    </div>
+
+    <div class="diag-body">
+      <div class="question-card">
+        <div class="qcard-label">Question</div>
+        <p id="diag-q" class="qtext"></p>
+      </div>
+      <div class="answer-row">
+        <input id="diag-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
+        <button class="btn-submit" onclick="submitDiag()">Submit</button>
+      </div>
+      <p id="diag-fb" class="feedback"></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== PRACTICE ===================== -->
+<div id="screen-practice" class="screen hidden">
+  <div class="prac-layout">
+
+    <!-- TOP BAR -->
+    <div class="prac-topbar">
+      <button class="btn-back" onclick="goHome()">← Dashboard</button>
+      <div class="prac-title-area">
+        <span id="prac-title" class="screen-label">Practice</span>
+        <span id="diff-badge" class="diff-badge badge-medium">Medium</span>
+      </div>
+      <div class="user-info">Not logged in</div>
+      <button class="logout-btn btn-back" style="display:none;">Log out</button>
+    </div>
+    <!-- calculator toggle placed below header -->
+    <div class="calc-control-row">
+      <button id="calc-tog" class="btn-calc-tog" onclick="toggleCalc()">🧮  Show Calculator</button>
+    </div>
+
+    <!-- MASTERY BAR -->
+    <div class="prac-mastery">
+      <span id="prac-mastery-label" class="mastery-inline-label">Mastery</span>
+      <div class="progress-bar flex1"><div id="prac-bar" class="pb-fill"></div></div>
+      <span id="prac-pct" class="mpct">0%</span>
+    </div>
+
+    <!-- MAIN AREA: Question + Calc -->
+    <div class="prac-main">
+
+      <!-- QUESTION PANEL -->
+      <div class="prac-q-panel">
+        <div class="question-card tall">
+          <div class="qcard-label">Problem</div>
+          <p id="prac-q" class="qtext"></p>
+        </div>
+        <div class="answer-row">
+          <input id="prac-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
+          <button class="btn-submit" onclick="submitPractice()">Submit</button>
+        </div>
+        <p id="prac-fb" class="feedback"></p>
+      </div>
+
+      <!-- SOLUTION SHEET -->
+      <div class="solution-panel">
+        <div class="solution-header">
+          <span class="solution-label">Solution Sheet</span>
+          <div class="mode-toggles">
+            <button id="btn-text-mode" class="btn-mode active" onclick="toggleSolutionMode('text')">Text</button>
+            <button id="btn-draw-mode" class="btn-mode" onclick="toggleSolutionMode('draw')">Draw</button>
+          </div>
+          <button class="btn-clear-work" onclick="clearWork()">Clear</button>
+        </div>
+        <div id="text-container" class="work-container active-mode">
+          <textarea id="work-area" class="work-area" placeholder="Write your work and calculations here..."></textarea>
+        </div>
+        <div id="canvas-container" class="canvas-container">
+          <canvas id="draw-canvas" class="draw-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- CALCULATOR PANEL -->
+      <div id="calc-panel" class="calc-panel calc-off">
+        <!-- opacity control inside calculator -->
+        <button id="calc-opacity-tog" class="calc-opacity-btn" onclick="toggleCalcOpacity()">👁‍🗨</button>
+        <div class="calc-inner">
+          <div id="calc-hist" class="calc-hist"></div>
+          <input id="calc-input" type="text" class="calc-display" placeholder="Type or use buttons…" autocomplete="off">
+          <div class="calc-result-row">
+            <span class="calc-eq-sym">=</span>
+            <span id="calc-result" class="calc-result-val"></span>
+          </div>
+          <div class="calc-grid">
+            <!-- fn row 1 -->
+            <button class="cb cfn" onclick="cClear()">AC</button>
+            <button class="cb cfn" onclick="cBack()">⌫</button>
+            <button class="cb cfn" onclick="cIns('(')"> ( </button>
+            <button class="cb cfn" onclick="cIns(')')"> ) </button>
+            <!-- fn row 2 -->
+            <button class="cb cfn" onclick="cIns('sin(')">sin</button>
+            <button class="cb cfn" onclick="cIns('cos(')">cos</button>
+            <button class="cb cfn" onclick="cIns('tan(')">tan</button>
+            <button class="cb cfn" onclick="cIns('^')">xʸ</button>
+            <!-- fn row 3 -->
+            <button class="cb cfn" onclick="cIns('asin(')">sin⁻¹</button>
+            <button class="cb cfn" onclick="cIns('acos(')">cos⁻¹</button>
+            <button class="cb cfn" onclick="cIns('atan(')">tan⁻¹</button>
+            <button class="cb cfn" onclick="cIns('sqrt(')">√</button>
+            <!-- fn row 4 -->
+            <button class="cb cfn" onclick="cIns('log(')">log</button>
+            <button class="cb cfn" onclick="cIns('ln(')">ln</button>
+            <button class="cb cfn" onclick="cIns('abs(')">|x|</button>
+            <button class="cb cfn" onclick="cIns('Math.PI')">π</button>
+            <!-- nums -->
+            <button class="cb cnum" onclick="cIns('7')">7</button>
+            <button class="cb cnum" onclick="cIns('8')">8</button>
+            <button class="cb cnum" onclick="cIns('9')">9</button>
+            <button class="cb cop"  onclick="cIns('/')">÷</button>
+
+            <button class="cb cnum" onclick="cIns('4')">4</button>
+            <button class="cb cnum" onclick="cIns('5')">5</button>
+            <button class="cb cnum" onclick="cIns('6')">6</button>
+            <button class="cb cop"  onclick="cIns('*')">×</button>
+
+            <button class="cb cnum" onclick="cIns('1')">1</button>
+            <button class="cb cnum" onclick="cIns('2')">2</button>
+            <button class="cb cnum" onclick="cIns('3')">3</button>
+            <button class="cb cop"  onclick="cIns('-')">−</button>
+
+            <button class="cb cnum" onclick="cIns('0')">0</button>
+            <button class="cb cnum" onclick="cIns('.')">.</button>
+            <button class="cb cop"  onclick="cIns('+')">+</button>
+            <button class="cb ceq"  onclick="cCalc()">=</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /prac-main -->
+  </div><!-- /prac-layout -->
+</div><!-- /screen-practice -->
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,994 @@
+/* ===================== TOKENS ===================== */
+:root {
+  --bg:        #0c0e16;
+  --surface:   #13151f;
+  --surface2:  #1c1f2e;
+  --surface3:  #242840;
+  --border:    #2a2d42;
+  --text:      #e4e6f0;
+  --text2:     #8289a8;
+  --text3:     #555d7a;
+  --accent:    #5b6ef5;
+  --accent-h:  #7c8fff;
+  --green:     #00d4aa;
+  --yellow:    #ffd166;
+  --red:       #ff6b6b;
+  --radius:    12px;
+}
+
+/* ===================== RESET ===================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ===================== SCREENS ===================== */
+.screen { width: 100%; height: 100vh; overflow: hidden; }
+.hidden { display: none !important; }
+
+/* ===================== HOME ===================== */
+.home-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.home-header {
+  padding: 1.25rem 0 0.75rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-glyph {
+  font-family: 'Syne', sans-serif;
+  font-size: 2.2rem;
+  color: var(--accent-h);
+  line-height: 1;
+}
+
+.brand-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.brand-sub {
+  font-size: 0.72rem;
+  color: var(--text2);
+  letter-spacing: 0.3px;
+}
+
+.home-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* scrollbar */
+.home-body::-webkit-scrollbar { width: 4px; }
+.home-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Mastery card */
+.mastery-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+}
+
+/* login screen */
+#screen-login {
+  position: relative;
+}
+
+.login-container {
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.login-container h2 {
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.login-container input {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.login-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.login-container button {
+  padding: 0.75rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  flex: 1;
+}
+
+.login-container button:hover { background: var(--accent-h); }
+
+.feedback {
+  color: var(--red);
+  font-size: 0.8rem;
+  height: 1em;
+  text-align: center;
+}
+
+.user-info {
+  font-size: 0.9rem;
+  color: var(--text2);
+  margin-left: auto;
+  align-self: center;
+}
+
+.user-info.logged-in {
+  color: var(--green);
+  font-weight: 700;
+}
+
+
+.mastery-card-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text3);
+  margin-bottom: 0.9rem;
+}
+
+.mastery-rows { display: flex; flex-direction: column; gap: 0.65rem; }
+
+.mrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mrow-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 110px;
+  flex-shrink: 0;
+}
+
+.micon {
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem;
+  color: var(--accent-h);
+  width: 18px;
+  text-align: center;
+}
+
+.mlabel { font-size: 0.85rem; font-weight: 600; }
+
+.mpct {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  color: var(--text2);
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Progress bar */
+.progress-bar {
+  flex: 1;
+  height: 7px;
+  background: var(--surface3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar.flex1 { flex: 1; }
+
+.pb-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-h));
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+/* Diagnostic button */
+.btn-diag {
+  width: 100%;
+  padding: 0.85rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  letter-spacing: 0.2px;
+}
+
+.btn-diag:hover { background: var(--accent-h); box-shadow: 0 4px 18px rgba(91,110,245,0.35); }
+.btn-diag:active { transform: scale(0.98); }
+
+/* Topic grid */
+.topic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.topic-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  text-align: center;
+}
+
+.topic-btn:hover {
+  border-color: var(--accent-h);
+  background: rgba(91,110,245,0.07);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(91,110,245,0.18);
+}
+
+.topic-btn:active { transform: scale(0.97); }
+
+.tbig {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.5rem;
+  color: var(--accent-h);
+  line-height: 1;
+  margin-bottom: 0.15rem;
+}
+
+.topic-btn strong { font-size: 0.88rem; font-weight: 700; }
+.topic-btn small { font-size: 0.72rem; color: var(--text2); line-height: 1.3; }
+
+/* Data Management */
+.data-mgmt {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.btn-data {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-data:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(91,110,245,0.08);
+}
+
+.btn-data:active { transform: scale(0.97); }
+
+
+/* ===================== TOP BARS ===================== */
+.diag-topbar, .prac-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface);
+  flex-wrap: wrap; /* support additional control row below */
+}
+
+.calc-control-row {
+  padding: 0.5rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.calc-control-row .btn-calc-tog {
+  margin-left: auto;
+}
+
+.btn-back {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-back:hover { border-color: var(--text2); color: var(--text); }
+
+.screen-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.diag-center-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.counter-pill {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  color: var(--text2);
+}
+
+/* ===================== DIAGNOSTIC LAYOUT ===================== */
+.diag-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.diag-prog-wrap {
+  padding: 0 1.25rem;
+  background: var(--surface);
+  padding-bottom: 0.85rem;
+  flex-shrink: 0;
+}
+
+.diag-prog-bar {
+  height: 5px;
+  background: var(--surface3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.diag-prog-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  transition: width 0.4s ease;
+  border-radius: 10px;
+}
+
+.diag-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5rem;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  gap: 1rem;
+}
+
+/* ===================== PRACTICE LAYOUT ===================== */
+.prac-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.prac-title-area {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-calc-tog {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.calc-opacity-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.btn-calc-tog:hover,
+.calc-opacity-btn:hover { border-color: var(--accent); color: var(--text); }
+
+.btn-calc-tog:hover { border-color: var(--accent); color: var(--text); }
+
+.prac-mastery {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mastery-inline-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text3);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Main two-column area */
+.prac-main {
+  position: relative; /* for absolutely positioned calculator */
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  gap: 1rem;
+  padding-left: 1rem; /* give room before first panel */
+  /* left‑align the question panel, canvas follows */
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Question panel */
+.prac-q-panel {
+  flex: 0 0 30%;
+  max-width: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 2.5rem;
+  gap: 1rem;
+  overflow: hidden;
+  /* remove centering so panel stays left-aligned */
+}
+
+/* Calculator panel – now a draggable bubble */
+.calc-panel {
+  position: absolute;
+  top: 10%;
+  right: 5%;
+  width: 20%;
+  min-width: 240px;
+  max-width: 320px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+  cursor: move;
+}
+
+.calc-panel.calc-off {
+  display: none;
+}
+
+/* reduce width on tablets/mobiles when absolute bubble might be too big */
+@media (max-width: 1023px) {
+  .calc-panel { width: 40%; }
+}
+
+.calc-inner {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Solution Sheet Panel */
+.solution-panel {
+  flex: 0 0 50%;
+  max-width: 50%;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.solution-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 0.75rem;
+}
+
+.mode-toggles {
+  display: flex;
+  gap: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.25rem;
+  background: var(--surface2);
+}
+
+.btn-mode {
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-mode:hover {
+  color: var(--text);
+  background: var(--surface3);
+}
+
+.btn-mode.active {
+  background: var(--accent);
+  color: white;
+}
+
+.solution-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+}
+
+.btn-clear-work {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-clear-work:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.btn-clear-work:active {
+  transform: scale(0.95);
+}
+
+.work-area {
+  flex: 1;
+  background: var(--bg);
+  border: none;
+  color: var(--text);
+  padding: 0.75rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  border-top: 1px solid var(--border);
+  min-height: 180px; /* ensure some usable vertical space */
+}
+
+.work-area::placeholder {
+  color: var(--text3);
+}
+
+.work-container {
+  flex: 1;
+  display: none;
+  overflow: hidden;
+}
+
+.work-container.active-mode {
+  display: flex;
+}
+
+.canvas-container {
+  flex: 1;
+  display: none;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  min-height: 180px; /* match work-area height */
+  padding: 0 0.5rem; /* add horizontal padding so canvas isn't flush with panel edges */
+}
+
+.canvas-container.active-mode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.draw-canvas {
+  width: 100%;
+  height: 100%;
+  background: white;
+  cursor: crosshair;
+  display: block;
+}
+
+/* ===================== FRACTION STYLING ===================== */
+.frac {
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  line-height: 1;
+}
+.frac .num,
+.frac .den {
+  display: block;
+  padding: 0 1px;
+}
+.frac .num { border-bottom: 1px solid currentColor; }
+
+/* ===================== QUESTION CARDS ===================== */
+.question-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.4rem;
+}
+
+.question-card.tall { min-height: 110px; }
+
+.qcard-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text3);
+  margin-bottom: 0.6rem;
+}
+
+.qtext {
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.6;
+  font-family: 'DM Mono', monospace;
+  white-space: pre-line;
+  word-break: break-word; /* ensure long equations wrap instead of overflowing */
+}
+
+/* ===================== INPUTS / BUTTONS ===================== */
+.answer-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap; /* ensure button doesn't overflow when panel narrow */
+}
+
+.ans-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 0.65rem 0.9rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  max-width: 220px;
+}
+
+.ans-input:focus {
+  outline: none;
+  border-color: var(--accent-h);
+  box-shadow: 0 0 0 3px rgba(91,110,245,0.18);
+}
+
+.btn-submit {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1.25rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0; /* don't shrink to half-size */
+}
+
+.btn-submit:hover { background: var(--accent-h); }
+.btn-submit:active { transform: scale(0.97); }
+
+/* ===================== FEEDBACK ===================== */
+.feedback {
+  font-size: 0.95rem;
+  font-weight: 700;
+  min-height: 1.4rem;
+  font-family: 'DM Mono', monospace;
+}
+
+.feedback.correct  { color: var(--green); }
+.feedback.incorrect { color: var(--red); }
+
+/* ===================== DIFFICULTY BADGE ===================== */
+.diff-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.18rem 0.6rem;
+  border-radius: 20px;
+}
+
+.badge-easy      { background: rgba(0,212,170,0.12);  color: var(--green); }
+.badge-medium    { background: rgba(255,209,102,0.12); color: var(--yellow); }
+.badge-hard      { background: rgba(255,107,107,0.12); color: var(--red); }
+.badge-impossible { background: rgba(255, 0, 0, 0.16); color: var(--red); }
+
+/* ===================== CALCULATOR ===================== */
+.calc-hist {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  min-height: 70px;
+  max-height: 90px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.calc-hist::-webkit-scrollbar { width: 3px; }
+.calc-hist::-webkit-scrollbar-thumb { background: var(--border); }
+
+.hist-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid var(--border);
+  gap: 0.5rem;
+}
+
+.hist-row:last-child { border-bottom: none; }
+.he { color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hr { color: var(--green); font-weight: 600; white-space: nowrap; }
+
+.calc-display {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.55rem 0.75rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.95rem;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.calc-display:focus { outline: none; border-color: var(--accent-h); }
+
+.calc-result-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  min-height: 38px;
+  flex-shrink: 0;
+}
+
+.calc-eq-sym { color: var(--text3); font-size: 1rem; font-family: 'DM Mono', monospace; }
+
+.calc-result-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--green);
+  word-break: break-all;
+}
+
+/* Calc grid */
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  flex: 1;
+  align-content: start;
+}
+
+.cb {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.1s;
+  padding: 0.6rem 0.2rem;
+  line-height: 1;
+  user-select: none;
+}
+
+.cb:active { transform: scale(0.91); }
+
+.cfn { background: var(--surface2); color: var(--yellow); font-size: 0.72rem; }
+.cfn:hover { background: rgba(255,209,102,0.1); border-color: rgba(255,209,102,0.35); }
+
+.cnum { background: var(--surface2); color: var(--text); }
+.cnum:hover { background: var(--surface3); border-color: var(--accent); }
+
+.cop { background: rgba(91,110,245,0.1); color: var(--accent-h); border-color: rgba(91,110,245,0.25); }
+.cop:hover { background: rgba(91,110,245,0.2); }
+
+.ceq { background: var(--accent); color: #fff; font-size: 1.05rem; border-color: var(--accent); }
+.ceq:hover { background: var(--accent-h); box-shadow: 0 3px 12px rgba(91,110,245,0.4); }
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 767px) {
+  html, body { overflow: auto; }
+  .screen { height: auto; min-height: 100vh; overflow: visible; }
+
+  /* Show toggle button on mobile */
+  .btn-calc-tog { display: block; }
+
+  /* Practice: stack vertically */
+  .prac-main { flex-direction: column; overflow: visible; }
+
+  .prac-q-panel {
+    padding: 1.25rem 1rem;
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* Solution sheet goes full width above calculator on mobile */
+  .solution-panel {
+    width: 100%;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    max-height: 200px;
+  }
+
+  .work-area {
+    max-height: 240px; /* give more vertical space on mobile */
+  }
+
+  .canvas-container {
+    max-height: 240px;
+  }
+
+  /* Calculator slides in from bottom on mobile */
+  .calc-panel {
+    position: static; /* restore normal flow */
+    cursor: default;
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 420px;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+  }
+
+  .calc-panel.calc-off {
+    width: 100%;
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+    border-top: none;
+  }
+
+  .calc-inner { height: auto; }
+
+  .calc-hist { min-height: 50px; max-height: 60px; }
+
+  .cb { padding: 0.7rem 0.1rem; font-size: 0.75rem; }
+
+  .ans-input { max-width: 100%; }
+
+  /* Topic grid 1 col on very small */
+  .topic-grid { grid-template-columns: 1fr; }
+
+  .diag-body { padding: 1.25rem 1rem; }
+
+  .prac-topbar { flex-wrap: wrap; gap: 0.5rem; }
+  .prac-title-area { order: -1; width: 100%; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .topic-grid { grid-template-columns: repeat(3, 1fr); }
+  .calc-panel { width: 280px; }
+  .solution-panel { width: 280px; }
+  .prac-q-panel { padding: 1.5rem; }
+}
