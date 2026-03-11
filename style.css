@@ -804,6 +804,30 @@ body {
   margin-left: 0.5rem;
 }
 
+/* simple spinner used during login/registration */
+.spinner {
+  width: 1.2rem;
+  height: 1.2rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-left: 0.5rem;
+}
+.spinner.hidden { display: none; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* utility: element only visible on narrow (phone) screens */
+.mobile-only { display: none; }
+
+/* toggle button no longer used; always hide */
+.calc-toggle-btn {
+  display: none !important;
+}
+
 .canvas-container {
   flex: 1;
   display: none;
@@ -813,13 +837,18 @@ body {
   min-height: 360px; /* match work-area height */
   padding: 0 0.5rem; /* add horizontal padding so canvas isn't flush with panel edges */
 }
-
 .canvas-container.active-mode {
   display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
+/* basic mobile tweaks */
+@media (max-width: 767px) {
+  body { overflow-x: hidden; }
+  .mobile-only { display: inline-block; }
+  .calc-toggle-btn { display: inline-block; }
+}
+
+/* default canvas styling (restored after removing mobile-specific rules) */
 .draw-canvas {
   width: 100%;
   height: 100%;
@@ -1073,22 +1102,25 @@ body {
   }
 
   .canvas-container {
-    max-height: 300px;
+    /* remove restrictive height on narrow screens so canvas can resize
+       naturally; allow scrolling if necessary */
+    max-height: none;
+    overflow: auto;
   }
 
-  /* keep calculator float/draggable on mobile; scale size appropriately */
-  .calc-panel {
-    position: absolute;
-    bottom: 5%;
-    right: 5%;
-    width: 80%;
-    max-width: 320px;
-    max-height: 50vh;
-    cursor: grab;
-    transition: opacity 0.3s ease;
+  /* desktop/tablet calculator sliding behaviour remains here */
+  /* no additional rules needed at top-level; sliding only used above 767px */
+
+  /* nested rule still adds toggle button for very small portrait phones */
+  /* toggle button visible on all phone sizes */
+  .calc-toggle-btn { display: inline-block; }
+
+  @media (max-width: 480px) and (orientation: portrait) {
+    /* further portrait-specific tweaks (none needed here) */
   }
 
-  /* when calculator is minimized we keep only the opacity toggle visible */
+  /* minimize/opacity states are not used on mobile sliding layout,
+     but keep definitions for larger screens */
   .calc-panel.calc-min {
     width: 40px;
     height: 40px;
@@ -1102,17 +1134,9 @@ body {
   }
 
   .calc-panel.calc-off {
-    /* same off‑state on mobile but keep the eye button visible */
-    width: 40px;
-    height: 40px;
-    overflow: visible;
-  }
-  .calc-panel.calc-off .calc-inner {
-    display: none;
-  }
-  .calc-panel.calc-off .calc-opacity-btn {
-    display: block;
-    opacity: 1;
+    /* store off state separately from sliding; component hidden via slide
+       on phones and off class is toggled when sliding closed */
+    /* nothing special here – just a marker class */
   }
 
   .calc-inner { height: auto; }

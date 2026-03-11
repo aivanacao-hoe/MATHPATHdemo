@@ -25,6 +25,7 @@
     <div class="login-buttons">
       <button id="login-btn">Log In</button>
       <button id="register-btn">Register</button>
+      <div id="login-spinner" class="spinner hidden"></div>
     </div>
     <p id="login-error" class="feedback"></p>
   </div>
@@ -138,6 +139,7 @@
         <input id="diag-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
         <button class="btn-submit" onclick="submitDiag()">Submit</button>
         <button id="hints-btn-diag" class="btn-submit btn-hints" onclick="toggleHints()">Hints</button>
+        <button id="calc-toggle-btn-diag" class="btn-submit btn-hints calc-toggle-btn" onclick="toggleCalcSlider()">Calc</button>
       </div>
       <p id="diag-fb" class="feedback"></p>
 
@@ -200,6 +202,7 @@
           <input id="prac-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
           <button class="btn-submit" onclick="submitPractice()">Submit</button>
           <button id="hints-btn" class="btn-submit btn-hints" onclick="toggleHints()">Hints</button>
+          <button id="calc-toggle-btn" class="btn-submit btn-hints calc-toggle-btn" onclick="toggleCalcSlider()">Calc</button>
         </div>
         <p id="prac-fb" class="feedback"></p>
       </div>
@@ -211,6 +214,7 @@
           <div class="mode-toggles">
             <button id="btn-text-mode" class="btn-mode active" onclick="toggleSolutionMode('text')">Text</button>
             <button id="btn-draw-mode" class="btn-mode" onclick="toggleSolutionMode('draw')">Draw</button>
+            <button id="btn-calc-mode" class="btn-mode mobile-only" onclick="toggleSolutionMode('calc')">Calc</button>
           </div>
           <button id="btn-undo" class="btn-undo-work" onclick="undoWork()">Undo</button>
           <button class="btn-clear-work" onclick="clearWork()">Clear</button>
@@ -221,10 +225,12 @@
         <div id="canvas-container" class="canvas-container">
           <canvas id="draw-canvas" class="draw-canvas"></canvas>
         </div>
+        <!-- on mobile we will move the calculator here; wrapper gets 'active-mode' when selected -->
+        <div id="mobile-calc-wrapper" class="canvas-container mobile-calc-wrapper"></div>
       </div>
 
       <!-- CALCULATOR PANEL -->
-      <div id="calc-panel" class="calc-panel">
+      <div id="calc-panel" class="calc-panel calc-off">
         <!-- opacity control inside calculator -->
         <button id="calc-opacity-tog" class="calc-opacity-btn" onclick="toggleCalcOpacity()">👁‍🗨</button>
         <div class="calc-inner">

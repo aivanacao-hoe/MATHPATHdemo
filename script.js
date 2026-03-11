@@ -88,6 +88,12 @@ function showScreen(id) {
   // hide any open hint panel when navigating screens
   const panel = document.getElementById('hint-panel')
   if (panel && panel.classList.contains('open')) panel.classList.remove('open')
+  // hide slider portion of calculator for wide screens
+  const calc = document.getElementById('calc-panel')
+  if (calc) {
+    if (calc.classList.contains('slide-open')) calc.classList.remove('slide-open')
+    // on phones we keep the calculator hidden until user taps "Calc"
+  }
 
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'))
   document.getElementById(id).classList.remove('hidden')
@@ -304,9 +310,8 @@ function goToPractice(topic) {
   nextQ()
   showScreen('screen-practice')
 
-  // calculator is shown only for algebra/geometry
-  if (topic === 'arithmetic') hideCalc()
-  else showCalcPanel()
+  // always start with calculator hidden/minified; user can open manually
+  hideCalc()
 }
 
 function updatePracticeMeta() {
@@ -397,10 +402,13 @@ function adjustDifficulty(topic) {
 // CALCULATOR TOGGLE
 // ===========================
 function hideCalc() {
+  // do nothing on narrow phones – calc should always be visible there
+  if (window.innerWidth <= 767) return;
   const panel = document.getElementById('calc-panel')
   if (!panel) return
-  // only minimize the calculator; we no longer toggle an "off" state
-  // since that prevented clicks from reaching the eye button.
+  // slide panel off-screen if slide logic is in effect
+  panel.classList.remove('slide-open')
+  // only minimize the calculator; avoid toggling an "off" state
   panel.classList.add('calc-min')
   panel.classList.remove('calc-off')
   // ensure opacity button remains visible
@@ -465,7 +473,10 @@ function toggleCalcOpacity() {
 // enable dragging of calculator panel like a chat bubble
 let calcDrag = { active: false, offsetX: 0, offsetY: 0 }
 function initCalcDrag() {
+  // attach handlers regardless of screen size; startCalcDrag will
+  // immediately bail on phones so listeners don't do anything there.
   const panel = document.getElementById('calc-panel')
+  if (!panel) return
   panel.addEventListener('mousedown', startCalcDrag)
   document.addEventListener('mousemove', moveCalc)
   document.addEventListener('mouseup', endCalcDrag)
@@ -475,6 +486,9 @@ function initCalcDrag() {
 }
 
 function startCalcDrag(e) {
+  // on phones we do not allow dragging; panel is fixed bottom
+  if (window.innerWidth <= 767) return
+
   const panel = document.getElementById('calc-panel')
   calcDrag.active = true
   let clientX = e.clientX || (e.touches && e.touches[0].clientX)
@@ -569,21 +583,31 @@ const drawHistories = { '': [], 'diag-': [] }
 function initCanvas(prefix = '') {
   const canvas = document.getElementById(prefix + 'draw-canvas')
   if (!canvas) return
-  
+
+  const parent = canvas.parentElement
+  if (!parent) return
+
+  const rect = parent.getBoundingClientRect()
+  // if parent has zero size (it may be hidden when called), wait a bit
+  if (rect.width === 0 || rect.height === 0) {
+    requestAnimationFrame(() => initCanvas(prefix))
+    return
+  }
+
   // whenever we install a fresh canvas (either first time or resized)
   // clear the undo stack for that prefix; previous snapshots will be
   // invalid due to size changes or manual clearing
   if (drawHistories[prefix]) drawHistories[prefix] = []
   updateUndoButton(prefix)
-  
-  const rect = canvas.parentElement.getBoundingClientRect()
+
   canvas.width = rect.width
   canvas.height = rect.height
-  
+
   const ctx = canvas.getContext('2d')
   ctx.fillStyle = 'white'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
-  
+
+  // attach pointer/touch handlers (duplicates are harmless)
   canvas.addEventListener('mousedown', startDraw)
   canvas.addEventListener('mousemove', draw)
   canvas.addEventListener('mouseup', stopDraw)
@@ -594,14 +618,42 @@ function initCanvas(prefix = '') {
 }
 
 // resize listener: if either canvas is visible, reinitialize it when the window changes
-window.addEventListener('resize', () => {
+function resizeCanvases() {
   ['','diag-'].forEach(prefix => {
     const canvas = document.getElementById(prefix + 'draw-canvas')
     if (canvas && canvas.parentElement.classList.contains('active-mode')) {
       initCanvas(prefix)
     }
   })
-})
+  adjustCanvasPadding()
+}
+
+// adjust bottom padding of canvas so fixed bottom calculator doesn't hide it
+function adjustCanvasPadding() {
+  if (window.innerWidth > 767) return
+  const calc = document.getElementById('calc-panel')
+  const canvasContainer = document.getElementById('canvas-container')
+  if (canvasContainer && calc) {
+    const h = calc.getBoundingClientRect().height || 0
+    canvasContainer.style.paddingBottom = (h + 16) + 'px'
+  }
+}
+
+// ensure padding recalculated on load
+window.addEventListener('load', adjustCanvasPadding)
+window.addEventListener('resize', resizeCanvases)
+window.addEventListener('orientationchange', resizeCanvases)
+
+// if available, observe container size changes (e.g. keyboard popups)
+if (window.ResizeObserver) {
+  ['','diag-'].forEach(prefix => {
+    const container = document.getElementById(prefix + 'canvas-container')
+    if (container) {
+      const obs = new ResizeObserver(() => initCanvas(prefix))
+      obs.observe(container)
+    }
+  })
+}
 
 function startDraw(e) {
   isDrawing = true
@@ -670,6 +722,9 @@ function handleTouch(e) {
 }
 
 function toggleSolutionMode(mode, prefix = '') {
+  // hide/minimize calculator whenever we leave calc mode; on phones
+  // this is a no‑op because hideCalc returns early
+  if (mode !== 'calc') hideCalc()
   // when switching modes we should also reset undo state for canvas if
   // we're about to clear/re-init it; not strictly required but keeps the
   // stacks from growing wildly
@@ -679,20 +734,37 @@ function toggleSolutionMode(mode, prefix = '') {
   }
   const textContainer = document.getElementById(prefix + 'text-container')
   const canvasContainer = document.getElementById(prefix + 'canvas-container')
+  const calcWrap = document.getElementById('mobile-calc-wrapper')
   const btnText = document.getElementById(prefix + 'btn-text-mode')
   const btnDraw = document.getElementById(prefix + 'btn-draw-mode')
+  const btnCalc = document.getElementById(prefix + 'btn-calc-mode')
   
   if (mode === 'text') {
     textContainer.classList.add('active-mode')
     canvasContainer.classList.remove('active-mode')
+    if (calcWrap) calcWrap.classList.remove('active-mode')
     btnText.classList.add('active')
     btnDraw.classList.remove('active')
+    if (btnCalc) btnCalc.classList.remove('active')
   } else if (mode === 'draw') {
     textContainer.classList.remove('active-mode')
     canvasContainer.classList.add('active-mode')
+    if (calcWrap) calcWrap.classList.remove('active-mode')
     btnText.classList.remove('active')
     btnDraw.classList.add('active')
+    if (btnCalc) btnCalc.classList.remove('active')
     setTimeout(() => initCanvas(prefix), 50)
+  } else if (mode === 'calc') {
+    textContainer.classList.remove('active-mode')
+    canvasContainer.classList.remove('active-mode')
+    if (calcWrap) calcWrap.classList.add('active-mode')
+    btnText.classList.remove('active')
+    btnDraw.classList.remove('active')
+    if (btnCalc) btnCalc.classList.add('active')
+    // ensure calculator is repositioned into wrapper
+    repositionCalc()
+    // make sure the panel is visible (clearing any off/min state)
+    showCalcPanel()
   }
 }
 
@@ -833,6 +905,55 @@ document.addEventListener('click', e => {
   if ((btn1 && btn1.contains(e.target)) || (btn2 && btn2.contains(e.target))) return;
   if (panel.classList.contains('open')) toggleHints();
 });
+
+// move calculator element into mobile wrapper when needed
+function repositionCalc() {
+  const panel = document.getElementById('calc-panel');
+  const wrapper = document.getElementById('mobile-calc-wrapper');
+  if (!panel || !wrapper) return;
+  if (window.innerWidth <= 767) {
+    if (panel.parentElement !== wrapper) {
+      // move panel in - preserve inline styles
+      wrapper.appendChild(panel);
+      panel.style.position = 'static';
+      panel.style.width = '100%';
+      panel.style.cursor = 'default';
+    }
+  } else {
+    // on larger screens move back to body and restore defaults
+    if (panel.parentElement === wrapper) {
+      document.body.appendChild(panel);
+      panel.style.position = 'absolute';
+      panel.style.top = '10%';
+      panel.style.right = '5%';
+      panel.style.width = '';
+      panel.style.cursor = 'move';
+    }
+    // make sure mobile wrapper is no longer flagged active so it stays
+    // hidden if we later shrink the window again
+    if (wrapper) wrapper.classList.remove('active-mode');
+  }
+}
+
+// ensure reposition happens when orientation/resize occurs
+window.addEventListener('resize', repositionCalc);
+window.addEventListener('orientationchange', repositionCalc);
+// call once early
+window.addEventListener('load', repositionCalc);
+
+// toggle calculator visibility by sliding on small phones
+function toggleCalcSlider() {
+  const panel = document.getElementById('calc-panel');
+  if (!panel) return;
+  // always slide on phones (<=767px)
+  const open = panel.classList.toggle('slide-open');
+  if (!open) {
+    // when sliding back out we may want to mark off state (optional)
+    panel.classList.add('calc-off');
+  } else {
+    panel.classList.remove('calc-off', 'calc-min');
+  }
+}
 
 // end hint panel logic
 

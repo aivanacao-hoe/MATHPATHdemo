@@ -89,16 +89,19 @@ function doLogin() {
   const err = document.getElementById('login-error')
   const loginBtn = document.getElementById('login-btn')
   const regBtn = document.getElementById('register-btn')
+  const spinner = document.getElementById('login-spinner')
 
   if (err) err.textContent = ''            // wipe old message
   if (loginBtn) loginBtn.disabled = true   // prevent double-click
   if (regBtn) regBtn.disabled = true
+  if (spinner) spinner.classList.remove('hidden')
 
   auth.signInWithEmailAndPassword(email, pass)
     .catch(e => { if (err) err.textContent = e.message })
     .finally(() => {
       if (loginBtn) loginBtn.disabled = false
       if (regBtn) regBtn.disabled = false
+      if (spinner) spinner.classList.add('hidden')
     })
 }
 function doRegister() {
@@ -107,16 +110,19 @@ function doRegister() {
   const err = document.getElementById('login-error')
   const loginBtn = document.getElementById('login-btn')
   const regBtn = document.getElementById('register-btn')
+  const spinner = document.getElementById('login-spinner')
 
   if (err) err.textContent = ''
   if (loginBtn) loginBtn.disabled = true
   if (regBtn) regBtn.disabled = true
+  if (spinner) spinner.classList.remove('hidden')
 
   auth.createUserWithEmailAndPassword(email, pass)
     .catch(e => { if (err) err.textContent = e.message })
     .finally(() => {
       if (loginBtn) loginBtn.disabled = false
       if (regBtn) regBtn.disabled = false
+      if (spinner) spinner.classList.add('hidden')
     })
 }
 
