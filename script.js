@@ -5,6 +5,10 @@ const TOPICS = ['arithmetic', 'algebra', 'geometry']
 let mastery = { arithmetic: 0, algebra: 0, geometry: 0 }
 let diff = { arithmetic: 'medium', algebra: 'medium', geometry: 'medium' }
 let streak = { arithmetic: { c: 0, w: 0 }, algebra: { c: 0, w: 0 }, geometry: { c: 0, w: 0 } }
+// number of times a topic has passed (>=80%)
+let diagPasses = { arithmetic: 0, algebra: 0, geometry: 0 }
+// consecutive pass streak for adaptive mastery
+let diagPassStreak = { arithmetic: 0, algebra: 0, geometry: 0 }
 let diagQs = [], diagIdx = 0, diagScores = {}
 // diagnostic timing state (20‑minute countdown)
 let diagTimer = null
@@ -16,8 +20,7 @@ let diagHistory = { arithmetic: [], algebra: [], geometry: [] }
 // this used to count straight 80%-plus passes; we still keep it for
 // backwards compatibility with any code that referenced it, but the
 // new mastery logic no longer relies solely on this value
-let diagPasses = { arithmetic: 0, algebra: 0, geometry: 0 }
-let hasDiag = false
+// (state variable defined earlier)let hasDiag = false
 let practiceTopic = null, currentAnswer = null
 
 // ===========================
@@ -214,20 +217,21 @@ function savePracticeState() {
     fbClass: document.getElementById('prac-fb')?.className.replace(/^feedback\s*/, '') || '',
     work: document.getElementById('work-area')?.value || ''
   }
-  try { sessionStorage.setItem('practiceState', JSON.stringify(state)) } catch {}
+  try { sessionStorage.setItem('practiceState_' + practiceTopic, JSON.stringify(state)) } catch {}
 }
 
 function clearPracticeState() {
-  try { sessionStorage.removeItem('practiceState') } catch {}
+  for (const t of TOPICS) {
+    try { sessionStorage.removeItem('practiceState_' + t) } catch {}
+  }
 }
 
 function loadPracticeState() {
   try {
-    const raw = sessionStorage.getItem('practiceState')
+    const raw = sessionStorage.getItem('practiceState_' + practiceTopic)
     if (!raw) return false
     const s = JSON.parse(raw)
-    if (s.topic && TOPICS.includes(s.topic)) {
-      practiceTopic = s.topic
+    if (s.topic && TOPICS.includes(s.topic) && s.topic === practiceTopic) {
       diff[s.topic] = s.difficulty || diff[s.topic]
       updatePracticeMeta()
       const qElem = document.getElementById('prac-q')
@@ -339,26 +343,31 @@ function restoreLastState() {
   return false
 }
 
-function goHome() {
+function goHome(skipRestore = false) {
   // stop diagnostic timer in case we were on that screen
   stopDiagTimer()
 
-  // clear any transient session storage from practice / diagnostic
-  clearPracticeState()
-  clearDiagState()
+  // NOTE: do not clear practice/diag storage here; users expect their
+  // session to be preserved when they tap "Dashboard" and come back.
+  // storage will be cleared when a new diagnostic starts or when the
+  // current session is explicitly finished.
 
   // reset calculator state whenever we return to the dashboard
   resetCalculator()
-  // ensure panel is closed/minimized (if visible on wide screens)
-  hideCalc()
+  // ensure panel is closed/minimized (if visible) – force even on phones
+  hideCalc(true)
 
   if (auth && auth.currentUser) {
     // optionally load fresh progress
     loadProgress(auth.currentUser.uid)
       .then(() => {
-        // try to resume the last screen; fall back to home dashboard
-        if (!restoreLastState()) {
+        if (skipRestore) {
           showScreen('screen-home'); renderDashboard(); initPalettePicker()
+        } else {
+          // try to resume the last screen; fall back to home dashboard
+          if (!restoreLastState()) {
+            showScreen('screen-home'); renderDashboard(); initPalettePicker()
+          }
         }
       })
   } else {
@@ -425,37 +434,34 @@ function stopDiagTimer() {
   }
 }
 
-// ===========================
-// choose `count` items from the end of an array (assuming later
-// entries are harder), then shuffle that subset.  used to make
-// diagnostics start with more challenging problems.
-function pickDiagItems(arr, count) {
-  const reversed = arr.slice().reverse()
-  return shuffle(reversed).slice(0, count)
-}
-
+// (pickDiagItems removed; diagnostics now generate problems directly)
 function startDiagnostic() {
+  // drop any stored session from a previous run so we truly start fresh
+  clearDiagState()
+
   // ensure any prior timer is cleared before we begin a new one
   stopDiagTimer()
-  const bank = getBank()
   diagScores = { arithmetic: 0, algebra: 0, geometry: 0 }
   diagIdx = 0
 
-  // geometry diagnostics still include a couple of impossible items
-  const geoItems = [...bank.geometry]
-  const impossible = geoItems.filter(q => q.impossible)
-  const normal = geoItems.filter(q => !q.impossible)
-
-  const geoSlice = pickDiagItems(normal, 14)
-  if (impossible.length > 0) {
-    geoSlice.push(...shuffle(impossible).slice(0, Math.min(2, impossible.length)))
-  }
-  const geoSet = geoSlice.map(q => ({ ...q, topic: 'geometry' }))
-
+  // build diagnostic questions by calling generators directly. we still
+  // include two impossible problems per topic to mimic the previous
+  // behaviour, but all items now originate from the same routines used
+  // in practice.
   const sets = TOPICS.map(t => {
-    if (t === 'geometry') return geoSet
-    const items = pickDiagItems(bank[t], 16)
-    return items.map(q => ({ ...q, topic: t }))
+    const normal = []
+    const levels = ['easy','medium','hard']
+    for (let i = 0; i < 14; i++) {
+      const lvl = levels[rand(0, levels.length - 1)]
+      const prob = generateProblem(t, lvl)
+      normal.push({ q: prob.question, a: prob.answer, topic: t, impossible: prob.impossible })
+    }
+    const imp = []
+    for (let i = 0; i < 2; i++) {
+      const prob = generateProblem(t, 'impossible')
+      imp.push({ q: prob.question, a: prob.answer, topic: t, impossible: prob.impossible })
+    }
+    return shuffle(normal.concat(imp))
   })
 
   // don't globally reshuffle; order reflects the harder-biased selection
@@ -542,16 +548,24 @@ function finishDiag() {
 
     recordDiagScore(t, percent)
 
-    // keep the old "pass" counter for reference; a pass is still defined
-    // as 80% or better on a single attempt
-    if (percent >= 80) diagPasses[t]++
+    // counters for pass totals and consecutive passes
+    if (percent >= 80) {
+      diagPasses[t]++
+      diagPassStreak[t]++
+    } else {
+      diagPassStreak[t] = 0
+    }
 
-    if (checkMasteryCondition(t)) {
+    // require a certain number of consecutive passes to reach full mastery
+    const requiredStreak = 3
+    if (diagPassStreak[t] >= requiredStreak) {
       mastery[t] = 100
     } else {
-      // until mastery is reached, show the highest percentage they've
-      // achieved so far so they can see progress
-      mastery[t] = Math.max(mastery[t], percent)
+      // adaptive increase: factor in both streak progress and raw percent
+      // base value from streak portion (streak/requiredStreak)
+      const streakBase = Math.round((diagPassStreak[t] / requiredStreak) * 100)
+      const candidate = Math.max(mastery[t] || 0, streakBase, percent)
+      mastery[t] = Math.min(candidate, 100)
     }
   })
   goHome()
@@ -575,16 +589,23 @@ function goToPractice(topic) {
   // show/hide Calc mode button based on topic
   const calcModeBtn = document.getElementById('btn-calc-mode')
   if (calcModeBtn) {
-    calcModeBtn.style.display = (topic === 'arithmetic') ? 'none' : ''
+    if (topic === 'arithmetic') {
+      calcModeBtn.style.display = 'none';
+    } else {
+      calcModeBtn.style.display = '';
+    }
   }
 
   // always start with calculator hidden; for arithmetic don't show at all
   hideCalc()
+  const panel = document.getElementById('calc-panel')
   if (topic === 'arithmetic') {
-    const panel = document.getElementById('calc-panel')
     if (panel) {
-      panel.classList.add('calc-off')
-      panel.classList.remove('slide-open')
+      panel.style.display = 'none';
+    }
+  } else {
+    if (panel) {
+      panel.style.display = '';
     }
   }
 }
@@ -611,7 +632,10 @@ function updatePracticeMeta() {
 }
 
 function nextQ() {
-  const prob = generateProblem(practiceTopic, diff[practiceTopic])
+  // Use the same question generation logic as diagnostic
+  const levels = ['easy','medium','hard']
+  const lvl = diff[practiceTopic] || levels[Math.floor(Math.random() * levels.length)]
+  const prob = generateProblem(practiceTopic, lvl)
   currentAnswer = prob.answer
   const qElem = document.getElementById('prac-q')
   qElem.innerHTML = formatQuestion(prob.question, practiceTopic)
@@ -680,9 +704,10 @@ function adjustDifficulty(topic) {
 // ===========================
 // CALCULATOR TOGGLE
 // ===========================
-function hideCalc() {
-  // do nothing on narrow phones – calc should always be visible there
-  if (window.innerWidth <= 767) return;
+function hideCalc(force = false) {
+  // on phones the calculator normally stays visible, but a forced hide
+  // (e.g. when leaving practice) should close it anyway.
+  if (!force && window.innerWidth <= 767) return;
   const panel = document.getElementById('calc-panel')
   if (!panel) return
   // slide panel off-screen if slide logic is in effect
@@ -1088,8 +1113,8 @@ const hintPools = {
     "Double-check your calculations before moving on."
   ],
   arithmetic: [
-    "Remember the order of operations: PEMDAS (Parentheses, Exponents, Multiplication/Division, Addition/Subtraction).",
-    "Think of PEMDAS as P → E → MD → AS; multiplication and division happen together, then addition and subtraction.",
+    "Remember the order of operations (parentheses, exponents, multiplication/division, addition/subtraction).",
+    "Think of the operation sequence as grouping first, then powers, then multiplication or division before addition or subtraction.",
     "Perform multiplication and division from left to right.",
     "Perform addition and subtraction from left to right.",
     "Simplify expressions step by step instead of trying to do everything at once.",
@@ -1115,7 +1140,7 @@ const hintPools = {
     "Label all known sides, angles, and variables.",
     "Break complex shapes into simpler shapes.",
     "Check if the figure contains triangles, rectangles, or circles you recognize.",
-    "Remember that the angles in a triangle add up to 180 degrees.",
+    "Remember that the angles in a triangle add up to a straight line.",
     "Look for right angles or perpendicular lines.",
     "Check for parallel lines which may create equal angles.",
     "Use symmetry when shapes appear balanced or mirrored.",
@@ -1133,9 +1158,9 @@ function generateHints(topic) {
   if (topic && hintPools[topic]) {
     pool = pool.concat(hintPools[topic]);
   }
-  // optionally add a couple of small example hints each time
-  pool.push("Example: isolate x by subtracting 3 from both sides.");
-  pool.push("Work step‑by‑step rather than trying to do everything at once.");
+  // Remove any hint that contains a number or the word 'Example:'
+  pool = pool.filter(h => !/\d|Example:/i.test(h));
+  // Make sure hints are vague and general (already written as such)
   pool = shuffle(pool);
   // limit size to keep navigation manageable
   return pool.slice(0, Math.min(10, pool.length));
@@ -1169,7 +1194,16 @@ function toggleHints() {
   if (!panel) return;
   const open = panel.classList.toggle('open');
   if (open) {
-    const topic = practiceTopic || null; // use current practice topic if available
+    let topic = practiceTopic || null;
+    // If on diagnostic screen, use current diagnostic question's topic
+    const diagScreen = document.getElementById('screen-diag');
+    if (diagScreen && !diagScreen.classList.contains('hidden')) {
+      if (diagQs && diagQs[diagIdx] && diagQs[diagIdx].topic) {
+        topic = diagQs[diagIdx].topic;
+      } else {
+        topic = null;
+      }
+    }
     currentHints = generateHints(topic);
     currentHintIdx = 0;
     showHint(currentHintIdx);
@@ -1240,110 +1274,10 @@ function toggleCalcSlider() {
 
 // end hint panel logic
 
-// ===========================
-// DIAGNOSTIC BANK
-// ===========================
-function getBank() {
-  return {
-    arithmetic: [
-      { q: 'Evaluate:   8 + 6 ÷ 3', a: '10' },
-      { q: 'Evaluate:   7 × (5 + 3)', a: '56' },
-      { q: 'Evaluate:   20 − 4 × 2', a: '12' },
-      { q: 'Evaluate:   (9 − 5) + 6', a: '10' },
-      { q: 'Evaluate:   18 ÷ 3 + 4', a: '10' },
-      { q: 'Evaluate:   6 + 4 × (10 − 3)', a: '34' },
-      { q: 'Evaluate:   (12 − 4)² ÷ 4', a: '16' },
-      { q: 'Evaluate:   5² + 3 × 4', a: '37' },
-      { q: 'Evaluate:   (15 − 5) × 2 + 8 ÷ 4', a: '22' },
-      { q: 'Evaluate:   30 ÷ (5 + 1) + 7', a: '12' },
-      { q: 'Evaluate:   2 + 3 × 4', a: '14' },
-      { q: 'Evaluate:   (8 + 4) ÷ 3 + 1', a: '5' },
-      { q: 'Evaluate:   10 − 2 + 5', a: '13' },
-      { q: 'Evaluate:   16 ÷ 2 × 3', a: '24' },
-      { q: 'Evaluate:   9 + 8 ÷ 4 − 2', a: '9' },
-      { q: 'Evaluate:   3² + 4²', a: '25' },
-      { q: 'Evaluate:   (6 + 2) × (5 − 3)', a: '16' },
-      { q: 'Evaluate:   100 ÷ 5 − 10', a: '10' },
-      { q: 'Evaluate:   12 + 18 ÷ 6', a: '15' },
-      { q: 'Evaluate:   15 × 2 ÷ 3 + 5', a: '15' },
-    ],
-    algebra: [
-      { q: 'Solve for x:   x + 7 = 15', a: '8' },
-      { q: 'Solve for x:   3x = 18', a: '6' },
-      { q: 'Solve for x:   x − 5 = 9', a: '14' },
-      { q: 'Solve for x:   4x + 2 = 10', a: '2' },
-      { q: 'Evaluate 2x + 3  when x = 4', a: '11' },
-      { q: 'Solve for x:   2x + 5 = 17', a: '6' },
-      { q: 'Solve for x:   5x − 3 = 2x + 9', a: '4' },
-      { q: 'Solve for x:   x/3 + 4 = 10', a: '18' },
-      { q: 'Expand:   3(x + 5)', a: '3x+15' },
-      { q: 'Factor:   x² + 5x', a: 'x(x+5)' },
-      { q: 'Solve for x:   6x = 30', a: '5' },
-      { q: 'Solve for x:   x + 12 = 20', a: '8' },
-      { q: 'Solve for x:   3x − 7 = 8', a: '5' },
-      { q: 'Evaluate 5x − 2  when x = 3', a: '13' },
-      { q: 'Solve for x:   x/2 + 5 = 12', a: '14' },
-      { q: 'Expand:   2(x − 3)', a: '2x-6' },
-      { q: 'Solve for x:   10x + 5 = 25', a: '2' },
-      { q: 'Factor:   2x² + 8x', a: '2x(x+4)' },
-      { q: 'Evaluate x² + 2x  when x = 3', a: '15' },
-      { q: 'Solve for x:   7 − x = 2', a: '5' },
-    ],
-    geometry: [
-      { q: 'Perimeter of a rectangle:   length = 8,  width = 5', a: '26' },
-      { q: 'Area of a square with side 6', a: '36' },
-      { q: 'A triangle has angles of 50° and 60°.  Find the third angle.', a: '70' },
-      { q: 'Area of a triangle:   base = 10,  height = 4', a: '20' },
-      { q: 'Circumference of a circle with radius 7  (π = 3.14)', a: '43.96' },
-      { q: 'Area of a circle with radius 5  (π = 3.14)', a: '78.5' },
-      { q: 'Right triangle legs: 6 and 8.  Find the hypotenuse.', a: '10' },
-      { q: 'Rectangle:   area = 48,  width = 6.  Find the length.', a: '8' },
-      { q: 'Right triangle:   hypotenuse = 13,  one leg = 5.  Find the other leg.', a: '12' },
-      { q: 'Triangle:   base = 12,  height = 9.  Find the area.', a: '54' },
-      { q: 'Perimeter of a square with side 7', a: '28' },
-      { q: 'Area of a rectangle with length 12 and width 4', a: '48' },
-      { q: 'Circumference of a circle with diameter 10  (π = 3.14)', a: '31.4' },
-      { q: 'A triangle has angles of 45° and 45°.  Find the third angle.', a: '90' },
-      { q: 'Area of a triangle with base 8 and height 6', a: '24' },
-      { q: 'Right triangle legs: 3 and 4.  Find the hypotenuse.', a: '5' },
-      { q: 'Area of a circle with radius 3  (π = 3.14)', a: '28.26' },
-      { q: 'Perimeter of a rectangle with length 10 and width 3', a: '26' },
-      { q: 'Right triangle:   hypotenuse = 10,  one leg = 6.  Find the other leg.', a: '8' },
-      { q: 'A triangle has angles of 30° and 70°.  Find the third angle.', a: '80' },
-      // special problems added for curriculum sequence
-      { q: 'Circumference of a circle with radius 7 (π = 3.14)', a: '43.96', level: 'easy' },
-      { q: 'A right triangle has one leg twice as long as the other. Hypotenuse = 10 cm. Find the legs (simplest radical form).', a: '√20 and 2√20', level: 'medium' },
-      { q: 'Semicircle on base of isosceles triangle (apex angle 90°, sides 10 cm). Area of region inside semicircle but outside triangle (in terms of π).', a: '25π-50', level: 'hard' },
-      { q: 'Two circles diameters 6 cm and 10 cm sit on a line. A 60° tangent touches each. Horizontal distance between tangency points?', a: '2√3', impossible: true, level: 'impossible' },
-    ]
-  }
-}
-
-// inject a few generated 'impossible' perimeter questions every time the bank is built
-function generateImpossibleGeo() {
-  const arr = []
-  for (let i = 0; i < 4; i++) {
-    // include decimals to make mental math harder
-    const L = (rand(80, 250) + Math.random()).toFixed(2)
-    const W = (rand(60, 200) + Math.random()).toFixed(2)
-    const per = (2 * (parseFloat(L) + parseFloat(W))).toFixed(2)
-    arr.push({
-      q: `Perimeter of a rectangle:   length = ${L},  width = ${W}`,
-      a: per,
-      impossible: true
-    })
-  }
-  return arr
-}
-
-// modify getBank to append impossibles dynamically
-const _origGetBank = getBank
-getBank = function() {
-  const bank = _origGetBank()
-  bank.geometry.push(...generateImpossibleGeo())
-  return bank
-}
-
+// NOTE: previous versions had a static diagnostic bank; all
+// questions are now produced via the generators below, so the old
+// `getBank` helper is no longer required.  The special geometry items
+// remain defined later in `SPECIAL_GEO` for use by `genGeo`.
 // ===========================
 // PROBLEM GENERATOR
 // ===========================
@@ -1376,6 +1310,19 @@ function generateProblem(topic, difficulty) {
 }
 
 function genArith(d) {
+  if (d === 'impossible') {
+    // build a deliberately messy expression with exponent, division and
+    // subtraction to push calculator use
+    const A = rand(10, 50), B = rand(5, 30), C = rand(2, 10), D = rand(1,5)
+    // compute answer carefully
+    const ans = Math.pow(A,2) - B * C / D
+    return {
+      question: `Evaluate:   ${A}² - ${B} × ${C} ÷ ${D}`,
+      answer: ans,
+      impossible: true
+    }
+  }
+
   // pool index corresponds to a template in arithTemplates below
   const poolMap = {
     easy: [0, 1, 2],
@@ -1436,6 +1383,20 @@ const arithTemplates = [
 ];
 
 function genAlgebra(d) {
+  if (d === 'impossible') {
+    // generate an equation with parentheses and distributed terms
+    const a = rand(2, 9), b = rand(1, 20), c = rand(2, 9)
+    const dval = rand(1, 20), e = rand(0, 15)
+    // form: a(x + b) = c(x - dval) + e
+    // solve symbolically
+    // a x + a b = c x - c dval + e
+    // (a - c) x = -a b - c dval + e
+    const coeff = a - c
+    const rhs = -a * b - c * dval + e
+    const xsol = coeff === 0 ? 0 : rhs / coeff
+    return { question: `Solve for x:   ${a}(x + ${b}) = ${c}(x - ${dval}) + ${e}`, answer: xsol, impossible: true }
+  }
+
   const easyPool = [1, 2]
   const medPool = [1, 2, 3, 4]
   const hardPool = [3, 4, 5, 6]
@@ -1494,12 +1455,12 @@ function genGeo(d) {
     const L = (Math.random() * 200 + 50).toFixed(2)
     const W = (Math.random() * 150 + 30).toFixed(2)
     const per = (2 * (parseFloat(L) + parseFloat(W))).toFixed(2)
-    return { question: `Find the perimeter of a rectangle.\n  Length = ${L},   Width = ${W}`, answer: per }
+    return { question: `Find the perimeter of a rectangle.\n  Length = ${L},   Width = ${W}`, answer: per, impossible: true }
   }
 
-  const easyPool = [1, 2, 3]
-  const medPool = [1, 2, 3, 4, 5]
-  const hardPool = [3, 4, 5, 6, 7]
+  const easyPool = [1, 2, 3, 8]                             // add square perimeter
+  const medPool = [1, 2, 3, 4, 5, 8, 9]                      // add square & triangle perimeter
+  const hardPool = [3, 4, 5, 6, 7, 8, 9, 10]                // include all shapes plus regular polygon
   const pool = d === 'easy' ? easyPool : d === 'medium' ? medPool : hardPool
 
   // some choices need to reroll until they meet constraints
@@ -1521,6 +1482,10 @@ function genGeo(d) {
     const L = rand(3, 25), W = rand(3, 25)
     return { question: `Find the perimeter of a rectangle.\n  Length = ${L},   Width = ${W}`, answer: 2 * (L + W) }
   }
+  if (type === 8) {
+    const s = rand(3, 25)
+    return { question: `Find the perimeter of a square.\n  Side = ${s}`, answer: 4 * s }
+  }
   if (type === 2) {
     const L = rand(3, 20), W = rand(3, 20)
     return { question: `Find the area of a rectangle.\n  Length = ${L},   Width = ${W}`, answer: L * W }
@@ -1536,6 +1501,18 @@ function genGeo(d) {
   if (type === 5) {
     const r = rand(3, 15)
     return { question: `Find the area of a circle.\n  Radius = ${r}   (Use π = 3.14)`, answer: parseFloat((3.14 * r * r).toFixed(2)) }
+  }
+  if (type === 9) {
+    let a = rand(3,15), b = rand(3,15), c = rand(3,15)
+    while (!(a + b > c && a + c > b && b + c > a)) {
+      a = rand(3,15); b = rand(3,15); c = rand(3,15)
+    }
+    return { question: `Find the perimeter of a triangle.\n  Sides = ${a}, ${b}, ${c}`, answer: a + b + c }
+  }
+  if (type === 10) {
+    const n = rand(5, 8)
+    const s = rand(3, 20)
+    return { question: `Find the perimeter of a regular ${n}-sided polygon.\n  Side length = ${s}`, answer: n * s }
   }
   if (type === 6) {
     const triples = [[3,4,5],[5,12,13],[8,15,17],[6,8,10],[9,12,15],[7,24,25]]

@@ -126,7 +126,7 @@
   <div class="diag-layout">
 
     <div class="diag-topbar">
-      <button class="btn-back" onclick="goHome()">← Back</button>
+      <button class="btn-back" onclick="goHome(true)">← Back</button>
       <div class="diag-center-info">
         <span class="screen-label">Diagnostic Test</span>
         <span id="diag-counter" class="counter-pill">1 / 15</span>
@@ -179,7 +179,7 @@
 
     <!-- TOP BAR -->
     <div class="prac-topbar">
-      <button class="btn-back" onclick="goHome()">← Dashboard</button>
+      <button class="btn-back" onclick="goHome(true)">← Dashboard</button>
       <div class="prac-title-area">
         <span id="prac-title" class="screen-label">Practice</span>
         <span id="diff-badge" class="diff-badge badge-medium">Medium</span>
@@ -220,7 +220,7 @@
           <div class="mode-toggles">
             <button id="btn-text-mode" class="btn-mode active" onclick="toggleSolutionMode('text')">Text</button>
             <button id="btn-draw-mode" class="btn-mode" onclick="toggleSolutionMode('draw')">Draw</button>
-            <button id="btn-calc-mode" class="btn-mode" onclick="toggleSolutionMode('calc')">Calc</button>
+            <button id="btn-calc-mode" class="btn-mode mobile-only" onclick="toggleSolutionMode('calc')">Calc</button>
           </div>
           <button id="btn-undo" class="btn-undo-work" onclick="undoWork()">Undo</button>
           <button class="btn-clear-work" onclick="clearWork()">Clear</button>

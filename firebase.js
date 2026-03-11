@@ -72,7 +72,7 @@ function initFirebase() {
 
 async function saveProgress(uid) {
   if (!db || !uid) return
-  const data = { mastery, diff, streak, hasDiag, diagPasses, lastUpdated: Date.now(), palette }
+  const data = { mastery, diff, streak, hasDiag, diagPasses, diagPassStreak, lastUpdated: Date.now(), palette }
   // include diagnostic session if one is active
   if (diagQs && diagIdx < diagQs.length) {
     data.diagState = {
@@ -99,6 +99,7 @@ async function loadProgress(uid) {
       streak = data.streak || streak
       hasDiag = data.hasDiag || hasDiag
       diagPasses = data.diagPasses || diagPasses
+      diagPassStreak = data.diagPassStreak || diagPassStreak
       if (data.palette) {
         palette = data.palette
         applyPalette(palette)
