@@ -13,16 +13,15 @@
   --green:     #00d4aa;
   --yellow:    #ffd166;
   --red:       #ff6b6b;
-  --radius:    12px;
+  --radius:    14px;
+  --safe-top:  env(safe-area-inset-top, 0px);
+  --safe-bot:  env(safe-area-inset-bottom, 0px);
 }
 
 /* ===================== RESET ===================== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body {
-  height: 100%;
-  overflow: hidden;
-}
+html { height: 100%; -webkit-text-size-adjust: 100%; }
 
 body {
   font-family: 'DM Sans', sans-serif;
@@ -30,30 +29,131 @@ body {
   color: var(--text);
   font-size: 15px;
   line-height: 1.5;
+  min-height: 100%;
+  overflow-x: hidden;
 }
 
 /* ===================== SCREENS ===================== */
-.screen { width: 100%; height: 100vh; overflow: hidden; }
+.screen { width: 100%; min-height: 100svh; min-height: 100vh; }
 .hidden { display: none !important; }
+
+/* ===================== LOGIN SCREEN ===================== */
+#screen-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100svh;
+  min-height: 100vh;
+  padding: 1.5rem 1rem;
+  background: radial-gradient(ellipse 70% 55% at 50% 0%,
+    rgba(91,110,245,0.18) 0%, transparent 70%), var(--bg);
+}
+
+.login-container {
+  width: 100%;
+  max-width: 360px;
+  padding: 2.5rem 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.4);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.45),
+              0 0 0 1px rgba(91,110,245,0.08);
+  animation: slideUp 0.45s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-container h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.7rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--text) 30%, var(--accent-h));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.25rem;
+}
+
+.login-container input {
+  padding: 0.82rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text);
+  /* 16px prevents iOS zoom */
+  font-size: 16px;
+  font-family: 'DM Sans', sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.login-container input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91,110,245,0.18);
+}
+
+.login-container input::placeholder { color: var(--text3); }
+
+.login-buttons {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.login-container button {
+  padding: 0.82rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.92rem;
+  font-family: 'DM Sans', sans-serif;
+  flex: 1;
+  min-height: 48px;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+.login-container button:hover {
+  background: var(--accent-h);
+  box-shadow: 0 4px 18px rgba(91,110,245,0.35);
+}
+.login-container button:active { transform: scale(0.97); }
+
+.feedback {
+  color: var(--red);
+  font-size: 0.82rem;
+  min-height: 1.2em;
+  text-align: center;
+}
 
 /* ===================== HOME ===================== */
 .home-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  max-width: 700px;
+  min-height: 100svh;
+  min-height: 100vh;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 1.25rem;
 }
 
 .home-header {
-  padding: 1.25rem 0 0.75rem;
+  padding: calc(var(--safe-top) + 1rem) 0 0.75rem;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.75rem;
 }
-
 
 .brand {
   display: flex;
@@ -63,149 +163,86 @@ body {
 
 .brand-glyph {
   font-family: 'Syne', sans-serif;
-  font-size: 2.2rem;
+  font-size: 2rem;
   color: var(--accent-h);
   line-height: 1;
 }
 
 .brand-name {
   font-family: 'Syne', sans-serif;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   letter-spacing: -0.5px;
   line-height: 1;
 }
 
 .brand-sub {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: var(--text2);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .home-body {
   flex: 1;
-  overflow-y: auto;
-  padding-bottom: 1.5rem;
+  padding-bottom: calc(var(--safe-bot) + 1.5rem);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  justify-content: center; /* center vertically when space permits */
+  gap: 1.2rem;
+  padding-top: 0.5rem;
 }
 
-/* scrollbar */
 .home-body::-webkit-scrollbar { width: 4px; }
 .home-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-/* Mastery card */
+/* ===================== PALETTE PICKER ===================== */
+.palette-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.35rem;
+}
+
+.palette-picker {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.palette-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  outline: none;
+}
+
+.palette-swatch:hover { transform: scale(1.18); }
+
+.palette-swatch.selected {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* ===================== MASTERY CARD ===================== */
 .mastery-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem 1.5rem;
-  min-height: 160px;
+  padding: 1.25rem;
 }
-
-/* palette picker */
-.palette-label {
-  font-size: 0.85rem;
-  color: var(--text2);
-  margin-bottom: 0.3rem;
-}
-.palette-picker {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-.palette-swatch {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  cursor: pointer;
-}
-.palette-swatch.selected { border-color: var(--accent); }
-
-
-/* login screen */
-#screen-login {
-  position: relative;
-}
-
-.login-container {
-  max-width: 320px;
-  margin: 0 auto;
-  padding: 2rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.login-container h2 {
-  font-size: 1.25rem;
-  text-align: center;
-}
-
-.login-container input {
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface2);
-  color: var(--text);
-}
-
-.login-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.login-container button {
-  padding: 0.75rem;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-weight: 600;
-  flex: 1;
-}
-
-.login-container button:hover { background: var(--accent-h); }
-
-.feedback {
-  color: var(--red);
-  font-size: 0.8rem;
-  height: 1em;
-  text-align: center;
-}
-
-.user-info {
-  font-size: 0.9rem;
-  color: var(--text2);
-  margin-left: auto;
-  align-self: center;
-}
-
-.user-info.logged-in {
-  color: var(--green);
-  font-weight: 700;
-}
-
 
 .mastery-card-title {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text3);
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.85rem;
 }
 
 .mastery-rows { display: flex; flex-direction: column; gap: 0.65rem; }
@@ -213,14 +250,14 @@ body {
 .mrow {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .mrow-left {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  width: 110px;
+  gap: 0.4rem;
+  width: 105px;
   flex-shrink: 0;
 }
 
@@ -232,10 +269,10 @@ body {
   text-align: center;
 }
 
-.mlabel { font-size: 0.85rem; font-weight: 600; }
+.mlabel { font-size: 0.84rem; font-weight: 600; }
 
 .mpct {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   font-family: 'DM Mono', monospace;
   color: var(--text2);
@@ -243,7 +280,6 @@ body {
   text-align: right;
 }
 
-/* Progress bar */
 .progress-bar {
   flex: 1;
   height: 7px;
@@ -262,112 +298,98 @@ body {
   transition: width 0.5s ease;
 }
 
-/* Diagnostic button */
+/* ===================== DIAGNOSTIC BUTTON ===================== */
 .btn-diag {
   width: 100%;
-  padding: 1.2rem;
-  background: var(--accent);
+  padding: 1.1rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-h));
   color: #fff;
   border: none;
   border-radius: var(--radius);
   font-family: 'DM Sans', sans-serif;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
   letter-spacing: 0.2px;
+  min-height: 52px;
+  box-shadow: 0 4px 20px rgba(91,110,245,0.3);
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 
-.btn-diag:hover { background: var(--accent-h); box-shadow: 0 4px 18px rgba(91,110,245,0.35); }
+.btn-diag:hover { opacity: 0.88; box-shadow: 0 6px 28px rgba(91,110,245,0.4); }
 .btn-diag:active { transform: scale(0.98); }
 
-/* Topic grid */
+/* ===================== TOPIC GRID ===================== */
 .topic-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .topic-btn {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.1rem 0.75rem;
+  padding: 1rem 0.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: border-color 0.18s, background 0.18s, transform 0.18s, box-shadow 0.18s;
   color: var(--text);
   font-family: 'DM Sans', sans-serif;
   text-align: center;
+  min-height: 90px;
 }
 
 .topic-btn:hover {
   border-color: var(--accent-h);
   background: rgba(91,110,245,0.07);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(91,110,245,0.18);
+  box-shadow: 0 6px 20px rgba(91,110,245,0.16);
 }
 
 .topic-btn:active { transform: scale(0.97); }
 
 .tbig {
   font-family: 'DM Mono', monospace;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   color: var(--accent-h);
   line-height: 1;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.1rem;
 }
 
-.topic-btn strong { font-size: 0.88rem; font-weight: 700; }
-.topic-btn small { font-size: 0.72rem; color: var(--text2); line-height: 1.3; }
+.topic-btn strong { font-size: 0.86rem; font-weight: 700; }
+.topic-btn small  { font-size: 0.68rem; color: var(--text2); line-height: 1.3; }
 
-/* Data Management */
-.data-mgmt {
-  display: flex;
-  gap: 0.8rem;
-  margin-top: 0.5rem;
-}
-
-.btn-data {
-  flex: 1;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  font-family: 'DM Sans', sans-serif;
+/* ===================== USER INFO ===================== */
+.user-info {
   font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.6rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s;
+  color: var(--text2);
+  margin-left: auto;
+  align-self: center;
   white-space: nowrap;
 }
 
-.btn-data:hover {
-  border-color: var(--accent);
-  color: var(--text);
-  background: rgba(91,110,245,0.08);
+.user-info.logged-in {
+  color: var(--green);
+  font-weight: 700;
 }
-
-.btn-data:active { transform: scale(0.97); }
-
 
 /* ===================== TOP BARS ===================== */
 .diag-topbar, .prac-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.9rem 1.25rem;
+  padding: calc(var(--safe-top) + 0.75rem) 1rem 0.75rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--surface);
-  flex-wrap: wrap; /* support additional control row below */
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-/* calc control row removed since calculator is always embedded */
 .calc-control-row { display: none; }
 
 .btn-back {
@@ -377,49 +399,51 @@ body {
   font-family: 'DM Sans', sans-serif;
   font-size: 0.82rem;
   font-weight: 600;
-  padding: 0.4rem 0.8rem;
+  padding: 0.45rem 0.85rem;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
+  min-height: 38px;
 }
 
 .btn-back:hover { border-color: var(--text2); color: var(--text); }
 
 .screen-label {
   font-family: 'Syne', sans-serif;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
 .diag-center-info {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.55rem;
 }
 
 .counter-pill {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
   font-weight: 700;
   font-family: 'DM Mono', monospace;
   color: var(--text2);
+  white-space: nowrap;
 }
 
 /* ===================== DIAGNOSTIC LAYOUT ===================== */
 .diag-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100svh;
+  min-height: 100vh;
 }
 
 .diag-prog-wrap {
-  padding: 0 1.25rem;
+  padding: 0 1.25rem 0.8rem;
   background: var(--surface);
-  padding-bottom: 0.85rem;
   flex-shrink: 0;
 }
 
@@ -442,28 +466,30 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 1.5rem;
+  justify-content: flex-start;
+  padding: 1.25rem;
   max-width: 640px;
   margin: 0 auto;
   width: 100%;
   gap: 1rem;
+  padding-bottom: calc(var(--safe-bot) + 1.5rem);
 }
 
 /* ===================== PRACTICE LAYOUT ===================== */
 .prac-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100svh;
+  min-height: 100vh;
 }
 
 .prac-title-area {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
+  flex: 1;
 }
 
-/* toggle button hidden / unused */
 .btn-calc-tog { display: none !important; }
 
 .calc-opacity-btn {
@@ -473,7 +499,6 @@ body {
   background: var(--surface2);
   border: 1px solid var(--border);
   color: var(--text2);
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
@@ -481,23 +506,20 @@ body {
   z-index: 1001;
 }
 
-.btn-calc-tog:hover,
 .calc-opacity-btn:hover { border-color: var(--accent); color: var(--text); }
-
-.btn-calc-tog:hover { border-color: var(--accent); color: var(--text); }
 
 .prac-mastery {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 1.25rem;
+  gap: 0.65rem;
+  padding: 0.55rem 1rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .mastery-inline-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: var(--text3);
   white-space: nowrap;
@@ -505,33 +527,30 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Main two-column area */
+/* ===================== PRACTICE MAIN ===================== */
 .prac-main {
-  position: relative; /* for absolutely positioned calculator */
+  position: relative;
   flex: 1;
   display: flex;
   overflow: hidden;
   gap: 1rem;
-  padding-left: 1rem; /* give room before first panel */
-  /* left‑align the question panel, canvas follows */
+  padding-left: 1rem;
   justify-content: flex-start;
-  align-items: stretch; /* ensure work area and canvas match height */
+  align-items: stretch;
 }
 
-/* Question panel */
 .prac-q-panel {
-  flex: 0 0 30%;
-  max-width: 30%;
+  flex: 0 0 32%;
+  max-width: 32%;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 2rem 2.5rem;
+  padding: 1.75rem 2rem;
   gap: 1rem;
   overflow: hidden;
-  /* remove centering so panel stays left-aligned */
 }
 
-/* Calculator panel – now a draggable bubble */
+/* ===================== CALCULATOR PANEL ===================== */
 .calc-panel {
   position: absolute;
   top: 10%;
@@ -541,49 +560,35 @@ body {
   max-width: 320px;
   flex-shrink: 0;
   border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--surface);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 1000;
   cursor: move;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
 
-/* when the calculator is put "off" we no longer hide the entire
-   panel, just collapse everything except the opacity-toggle button
-   so the user can still bring it back.  toggle styles that were
-   previously part of the calc-min rule are left in place. */
 .calc-panel.calc-off {
-  /* keep a small footprint so the toggle button stays accessible */
   width: 40px;
   height: 40px;
-  /* panel remains fully opaque so children can be seen */
   overflow: visible;
 }
-.calc-panel.calc-off .calc-inner {
-  display: none;
-}
-.calc-panel.calc-off .calc-opacity-btn {
-  display: block;
-  opacity: 1;
-  /* pointer-events default allows clicks */
-}
 
-/* reduce width on tablets/mobiles when absolute bubble might be too big */
-@media (max-width: 1023px) {
-  .calc-panel { width: 40%; }
-}
+.calc-panel.calc-off .calc-inner { display: none; }
+.calc-panel.calc-off .calc-opacity-btn { display: block; opacity: 1; }
 
 .calc-inner {
-  padding: 0.85rem;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.45rem;
   height: 100%;
   overflow: hidden;
 }
 
-/* Solution Sheet Panel */
+/* ===================== SOLUTION PANEL ===================== */
 .solution-panel {
   flex: 0 0 50%;
   max-width: 50%;
@@ -594,9 +599,7 @@ body {
   flex-direction: column;
   overflow: hidden;
 }
-/* when the sheet is used on the diagnostic screen we want it
-   to occupy the full available height and width since the layout
-   is vertical rather than side-by-side */
+
 #screen-diag .solution-panel {
   flex: 1 0 auto;
   max-width: 100%;
@@ -606,18 +609,19 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 0.9rem;
+  padding: 0.65rem 0.85rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .mode-toggles {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.3rem;
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 0.25rem;
+  padding: 0.2rem;
   background: var(--surface2);
 }
 
@@ -626,77 +630,49 @@ body {
   border: none;
   color: var(--text2);
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.35rem 0.6rem;
+  padding: 0.3rem 0.55rem;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
+  /* ensure all buttons same height so they don't jump on hover/active */
+  min-height: 28px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-mode:hover {
-  color: var(--text);
-  background: var(--surface3);
-}
-
-.btn-mode.active {
-  background: var(--accent);
-  color: white;
-}
+.btn-mode:hover { color: var(--text); background: var(--surface3); }
+.btn-mode.active { background: var(--accent); color: white; }
 
 .solution-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text3);
 }
 
-.btn-clear-work {
+.btn-clear-work, .btn-undo-work {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text2);
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.25rem 0.5rem;
+  padding: 0.28rem 0.5rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
+  min-height: 30px;
 }
 
-.btn-clear-work:hover {
-  border-color: var(--red);
-  color: var(--red);
-}
-
-.btn-clear-work:active {
-  transform: scale(0.95);
-}
-
-/* undo button uses same base styles as clear but with accent hover */
-.btn-undo-work {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text2);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-right: 0.5rem; /* keep some spacing before the clear button */
-}
-
-.btn-undo-work:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.btn-undo-work:active {
-  transform: scale(0.95);
-}
+.btn-clear-work:hover { border-color: var(--red); color: var(--red); }
+.btn-undo-work:hover  { border-color: var(--accent); color: var(--accent); }
+.btn-clear-work:active, .btn-undo-work:active { transform: scale(0.95); }
+.btn-undo-work { margin-right: 0.35rem; }
 
 .work-area {
   flex: 1;
@@ -710,123 +686,13 @@ body {
   resize: none;
   outline: none;
   border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border); /* bottom outline for typing area */
-  min-height: 360px; /* ensure some usable vertical space */
+  min-height: 200px;
 }
 
-.work-area::placeholder {
-  color: var(--text3);
-}
+.work-area::placeholder { color: var(--text3); }
 
-.work-container {
-  flex: 1;
-  display: none;
-  overflow: hidden;
-}
-
-.work-container.active-mode {
-  display: flex;
-}
-
-/* ---------- hint panel styles ---------- */
-.hint-panel {
-  position: fixed;
-  top: 0;
-  right: -320px; /* hidden by default */
-  width: 300px;
-  max-width: 80vw;
-  height: 100%;
-  background: var(--surface);
-  box-shadow: -4px 0 8px rgba(0,0,0,0.2);
-  transition: right 0.3s ease;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem;
-}
-.hint-panel.open {
-  right: 0;
-}
-.hint-close {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--text2);
-}
-.hint-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-}
-.hint-text {
-  background: var(--bg);
-  color: var(--text);
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  text-align: center;
-  font-size: 1rem;
-  line-height: 1.4;
-  min-height: 80px;
-  width: 100%;
-  opacity: 1;
-  transition: opacity 0.25s ease;
-}
-.hint-text.fade {
-  opacity: 0.2;
-}
-.hint-nav {
-  margin-top: 1rem;
-  display: flex;
-  gap: 0.5rem;
-}
-.hint-nav-btn {
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-/* hints button in answer row */
-.btn-hints {
-  margin-left: 0.5rem;
-}
-
-/* simple spinner used during login/registration */
-.spinner {
-  width: 1.2rem;
-  height: 1.2rem;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-left: 0.5rem;
-}
-.spinner.hidden { display: none; }
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* utility: element only visible on narrow (phone) screens */
-.mobile-only { display: none; }
-
-/* toggle button no longer used; always hide */
-.calc-toggle-btn {
-  display: none !important;
-}
+.work-container { flex: 1; display: none; overflow: hidden; }
+.work-container.active-mode { display: flex; }
 
 .canvas-container {
   flex: 1;
@@ -834,21 +700,12 @@ body {
   background: var(--bg);
   border-top: 1px solid var(--border);
   overflow: hidden;
-  min-height: 360px; /* match work-area height */
-  padding: 0 0.5rem; /* add horizontal padding so canvas isn't flush with panel edges */
-}
-.canvas-container.active-mode {
-  display: flex;
+  min-height: 300px;
+  padding: 0 0.5rem;
 }
 
-/* basic mobile tweaks */
-@media (max-width: 767px) {
-  body { overflow-x: hidden; }
-  .mobile-only { display: inline-block; }
-  .calc-toggle-btn { display: inline-block; }
-}
+.canvas-container.active-mode { display: flex; }
 
-/* default canvas styling (restored after removing mobile-specific rules) */
 .draw-canvas {
   width: 100%;
   height: 100%;
@@ -857,68 +714,155 @@ body {
   display: block;
 }
 
-/* ===================== FRACTION STYLING ===================== */
-.frac {
-  display: inline-block;
-  vertical-align: middle;
+.mobile-calc-wrapper {
+  display: none;
+  background: var(--surface);
+  flex-direction: column;
+}
+
+/* ===================== HINT PANEL ===================== */
+.hint-panel {
+  position: fixed;
+  top: 0;
+  /* use translate to hide off-screen; avoids needing to know exact width */
+  right: 0;
+  transform: translateX(100%);
+  width: 300px;
+  max-width: 85vw;
+  height: 100%;
+  background: var(--surface);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.35);
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1);
+  /* must be above calc-panel (z-index 1000) and mobile calc (z-index 3000) */
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.25rem 1rem;
+  border-left: 1px solid var(--border);
+}
+
+.hint-panel.open { transform: translateX(0); }
+
+.hint-close {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--text2);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.hint-close:hover { color: var(--text); border-color: var(--accent); }
+
+.hint-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+  padding-top: 2rem;
+}
+
+.hint-text {
+  background: var(--bg);
+  color: var(--text);
+  padding: 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
   text-align: center;
-  line-height: 1;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  min-height: 80px;
+  width: 100%;
+  transition: opacity 0.25s ease;
 }
-.frac .num,
-.frac .den {
-  display: block;
-  padding: 0 1px;
+
+.hint-text.fade { opacity: 0.2; }
+
+.hint-nav { display: flex; gap: 0.6rem; }
+
+.hint-nav-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
 }
-.frac .num { border-bottom: 1px solid currentColor; }
+
+.hint-nav-btn:hover { background: var(--accent-h); }
+.hint-nav-btn:active { transform: scale(0.92); }
+
+.btn-hints { margin-left: 0.4rem; }
 
 /* ===================== QUESTION CARDS ===================== */
 .question-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.25rem 1.4rem;
+  padding: 1.1rem 1.25rem;
 }
 
-.question-card.tall { min-height: 110px; }
+.question-card.tall { min-height: 100px; }
 
 .qcard-label {
-  font-size: 0.7rem;
+  font-size: 0.64rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text3);
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
 }
 
 .qtext {
-  font-size: 1.18rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--text);
   line-height: 1.6;
   font-family: 'DM Mono', monospace;
   white-space: pre-line;
-  word-break: break-word; /* ensure long equations wrap instead of overflowing */
+  word-break: break-word;
 }
 
-/* ===================== INPUTS / BUTTONS ===================== */
+/* ===================== ANSWER ROW ===================== */
 .answer-row {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.55rem;
   align-items: center;
-  flex-wrap: wrap; /* ensure button doesn't overflow when panel narrow */
+  flex-wrap: wrap;
 }
 
 .ans-input {
   flex: 1;
+  min-width: 0;
   background: var(--surface2);
   border: 1.5px solid var(--border);
   border-radius: 10px;
   color: var(--text);
-  padding: 0.65rem 0.9rem;
+  padding: 0.7rem 0.9rem;
   font-family: 'DM Mono', monospace;
-  font-size: 1rem;
+  /* 16px prevents iOS zoom */
+  font-size: 16px;
   transition: border-color 0.15s, box-shadow 0.15s;
-  max-width: 220px;
+  max-width: 200px;
 }
 
 .ans-input:focus {
@@ -932,13 +876,14 @@ body {
   color: #fff;
   border: none;
   border-radius: 10px;
-  padding: 0.65rem 1.25rem;
+  padding: 0.7rem 1.1rem;
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, transform 0.1s;
-  flex-shrink: 0; /* don't shrink to half-size */
+  flex-shrink: 0;
+  min-height: 44px;
 }
 
 .btn-submit:hover { background: var(--accent-h); }
@@ -946,38 +891,39 @@ body {
 
 /* ===================== FEEDBACK ===================== */
 .feedback {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   min-height: 1.4rem;
   font-family: 'DM Mono', monospace;
 }
 
-.feedback.correct  { color: var(--green); }
+.feedback.correct   { color: var(--green); }
 .feedback.incorrect { color: var(--red); }
 
 /* ===================== DIFFICULTY BADGE ===================== */
 .diff-badge {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 0.18rem 0.6rem;
+  padding: 0.18rem 0.55rem;
   border-radius: 20px;
+  white-space: nowrap;
 }
 
-.badge-easy      { background: rgba(0,212,170,0.12);  color: var(--green); }
-.badge-medium    { background: rgba(255,209,102,0.12); color: var(--yellow); }
-.badge-hard      { background: rgba(255,107,107,0.12); color: var(--red); }
-.badge-impossible { background: rgba(255, 0, 0, 0.16); color: var(--red); }
+.badge-easy       { background: rgba(0,212,170,0.12);  color: var(--green); }
+.badge-medium     { background: rgba(255,209,102,0.12); color: var(--yellow); }
+.badge-hard       { background: rgba(255,107,107,0.12); color: var(--red); }
+.badge-impossible { background: rgba(255,0,0,0.16);    color: var(--red); }
 
 /* ===================== CALCULATOR ===================== */
 .calc-hist {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.5rem 0.65rem;
-  min-height: 70px;
-  max-height: 90px;
+  padding: 0.45rem 0.6rem;
+  min-height: 60px;
+  max-height: 80px;
   overflow-y: auto;
   flex-shrink: 0;
 }
@@ -989,8 +935,8 @@ body {
   display: flex;
   justify-content: space-between;
   font-family: 'DM Mono', monospace;
-  font-size: 0.72rem;
-  padding: 0.2rem 0;
+  font-size: 0.7rem;
+  padding: 0.18rem 0;
   border-bottom: 1px solid var(--border);
   gap: 0.5rem;
 }
@@ -1005,7 +951,7 @@ body {
   border: 1.5px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.7rem;
   font-family: 'DM Mono', monospace;
   font-size: 0.95rem;
   transition: border-color 0.15s;
@@ -1021,8 +967,8 @@ body {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.4rem 0.75rem;
-  min-height: 38px;
+  padding: 0.35rem 0.7rem;
+  min-height: 36px;
   flex-shrink: 0;
 }
 
@@ -1030,37 +976,37 @@ body {
 
 .calc-result-val {
   font-family: 'Syne', sans-serif;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--green);
   word-break: break-all;
 }
 
-/* Calc grid */
 .calc-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 5px;
+  gap: 4px;
   flex: 1;
   align-content: start;
 }
 
 .cb {
-  border-radius: 8px;
+  border-radius: 7px;
   border: 1px solid var(--border);
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.1s;
-  padding: 0.6rem 0.2rem;
+  padding: 0.55rem 0.2rem;
   line-height: 1;
   user-select: none;
+  min-height: 36px;
 }
 
 .cb:active { transform: scale(0.91); }
 
-.cfn { background: var(--surface2); color: var(--yellow); font-size: 0.72rem; }
+.cfn { background: var(--surface2); color: var(--yellow); font-size: 0.68rem; }
 .cfn:hover { background: rgba(255,209,102,0.1); border-color: rgba(255,209,102,0.35); }
 
 .cnum { background: var(--surface2); color: var(--text); }
@@ -1069,96 +1015,188 @@ body {
 .cop { background: rgba(91,110,245,0.1); color: var(--accent-h); border-color: rgba(91,110,245,0.25); }
 .cop:hover { background: rgba(91,110,245,0.2); }
 
-.ceq { background: var(--accent); color: #fff; font-size: 1.05rem; border-color: var(--accent); }
+.ceq { background: var(--accent); color: #fff; font-size: 1rem; border-color: var(--accent); }
 .ceq:hover { background: var(--accent-h); box-shadow: 0 3px 12px rgba(91,110,245,0.4); }
 
-/* ===================== RESPONSIVE ===================== */
+/* ===================== SPINNER ===================== */
+.spinner {
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.spinner.hidden { display: none; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===================== FRACTION ===================== */
+.frac { display: inline-block; vertical-align: middle; text-align: center; line-height: 1; }
+.frac .num, .frac .den { display: block; padding: 0 1px; }
+.frac .num { border-bottom: 1px solid currentColor; }
+
+/* ===================== DATA MANAGEMENT ===================== */
+.data-mgmt { display: flex; gap: 0.7rem; }
+
+.btn-data {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-data:hover { border-color: var(--accent); color: var(--text); background: rgba(91,110,245,0.08); }
+.btn-data:active { transform: scale(0.97); }
+
+/* ===================== UTILITIES ===================== */
+.mobile-only { display: none; }
+/* calc-toggle-btn removed from HTML; keep rule harmless */
+.calc-toggle-btn { display: none !important; }
+
+/* ===================== TABLET ===================== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .topic-grid { grid-template-columns: repeat(3, 1fr); }
+  .calc-panel { width: 38%; min-width: 220px; }
+  .solution-panel { flex: 0 0 46%; max-width: 46%; }
+  .prac-q-panel { padding: 1.25rem; }
+}
+
+/* ===================== PHONE ===================== */
 @media (max-width: 767px) {
-  html, body { overflow: auto; }
-  .screen { height: auto; min-height: 100vh; overflow: visible; }
+  html, body { overflow-x: hidden; }
 
+  .screen { height: auto; min-height: 100svh; }
 
-  /* Practice: stack vertically */
-  .prac-main { flex-direction: column; overflow: visible; }
+  /* HOME */
+  .home-layout { padding: 0 1rem; }
+  .home-header  { padding-top: calc(var(--safe-top) + 0.75rem); }
+
+  .topic-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .topic-btn  { min-height: 82px; }
+
+  /* TOP BARS */
+  .prac-topbar {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+    padding: calc(var(--safe-top) + 0.6rem) 0.85rem 0.6rem;
+  }
+
+  .prac-title-area { order: -1; width: 100%; }
+
+  .diag-topbar {
+    padding: calc(var(--safe-top) + 0.6rem) 0.85rem 0.6rem;
+  }
+
+  .prac-mastery { padding: 0.45rem 0.85rem; }
+
+  /* PRACTICE: vertical stack */
+  .prac-main {
+    flex-direction: column;
+    overflow: visible;
+    padding: 0;
+    gap: 0;
+  }
 
   .prac-q-panel {
-    padding: 1.25rem 1rem;
+    flex: none;
     max-width: 100%;
+    width: 100%;
+    padding: 1rem;
     justify-content: flex-start;
   }
 
-  /* Solution sheet goes full width above calculator on mobile */
+  .ans-input { max-width: 100%; flex: 1; }
+
   .solution-panel {
     width: 100%;
+    max-width: 100%;
+    flex: none;
     border-left: none;
     border-right: none;
     border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    max-height: 200px;
+    min-height: 240px;
   }
 
-  .work-area {
-    max-height: 280px; /* more vertical space on narrow screens */
+  .work-area { min-height: 200px; }
+
+  .canvas-container { min-height: 220px; max-height: none; overflow: auto; }
+
+  /* Show calc mode button (inside solution panel) on mobile */
+  .mobile-only { display: inline-flex; }
+
+  /* Calculator: bottom sheet on mobile */
+  .calc-panel {
+    position: fixed;
+    bottom: -100%;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: unset;
+    height: auto;
+    max-height: 78vh;
+    overflow-y: auto;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    cursor: default;
+    transition: bottom 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 3000;
+    padding-bottom: var(--safe-bot);
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.45);
   }
 
-  .canvas-container {
-    /* remove restrictive height on narrow screens so canvas can resize
-       naturally; allow scrolling if necessary */
-    max-height: none;
-    overflow: auto;
-  }
-
-  /* desktop/tablet calculator sliding behaviour remains here */
-  /* no additional rules needed at top-level; sliding only used above 767px */
-
-  /* nested rule still adds toggle button for very small portrait phones */
-  /* toggle button visible on all phone sizes */
-  .calc-toggle-btn { display: inline-block; }
-
-  @media (max-width: 480px) and (orientation: portrait) {
-    /* further portrait-specific tweaks (none needed here) */
-  }
-
-  /* minimize/opacity states are not used on mobile sliding layout,
-     but keep definitions for larger screens */
-  .calc-panel.calc-min {
-    width: 40px;
-    height: 40px;
-    overflow: visible;
-  }
-  .calc-panel.calc-min .calc-inner {
-    display: none;
-  }
-  .calc-panel.calc-min .calc-opacity-btn {
-    display: block;
-  }
+  .calc-panel.slide-open { bottom: 0; }
 
   .calc-panel.calc-off {
-    /* store off state separately from sliding; component hidden via slide
-       on phones and off class is toggled when sliding closed */
-    /* nothing special here – just a marker class */
+    bottom: -100%;
+    width: 100%;
+    height: auto;
+    overflow: hidden;
   }
 
-  .calc-inner { height: auto; }
+  .calc-panel.calc-off .calc-opacity-btn { display: none; }
 
-  .calc-hist { min-height: 50px; max-height: 60px; }
+  .calc-inner { height: auto; padding: 1rem; overflow: visible; }
+  .calc-hist { min-height: 44px; max-height: 55px; }
+  .cb { padding: 0.7rem 0.1rem; font-size: 0.72rem; min-height: 44px; }
 
-  .cb { padding: 0.7rem 0.1rem; font-size: 0.75rem; }
+  /* DIAGNOSTIC */
+  .diag-body { padding: 1rem; }
 
-  .ans-input { max-width: 100%; }
-
-  /* Topic grid 1 col on very small */
-  .topic-grid { grid-template-columns: 1fr; }
-
-  .diag-body { padding: 1.25rem 1rem; }
-
-  .prac-topbar { flex-wrap: wrap; gap: 0.5rem; }
-  .prac-title-area { order: -1; width: 100%; }
+  /* Hint panel */
+  .hint-panel { width: 88vw; max-width: 88vw; }
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  .topic-grid { grid-template-columns: repeat(3, 1fr); }
-  .calc-panel { width: 280px; }
-  .solution-panel { width: 280px; }
-  .prac-q-panel { padding: 1.5rem; }
+/* ===================== VERY SMALL PHONES ===================== */
+@media (max-width: 400px) {
+  .topic-grid { grid-template-columns: 1fr; }
+  .topic-btn  { min-height: 68px; }
+  .tbig       { font-size: 1.2rem; }
+  .qtext      { font-size: 1rem; }
+  .calc-panel { max-height: 75vh; }
+  .brand-name { font-size: 1.2rem; }
+}
+
+/* ===================== LANDSCAPE PHONE ===================== */
+@media (max-width: 767px) and (orientation: landscape) {
+  .calc-panel { max-height: 92vh; }
+  .diag-body  { padding: 0.75rem 1rem; }
+  .home-body  { gap: 0.85rem; }
 }

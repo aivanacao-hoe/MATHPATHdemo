@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0c0e16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>MathPath</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -16,10 +19,15 @@
 </head>
 <body>
 
+<!-- simple loader shown until JS decides which screen to display -->
+<div id="loading-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0c0e16;color:white;display:flex;align-items:center;justify-content:center;z-index:10000;font-size:1.2rem;">Loading…</div>
+
 <!-- ===================== LOGIN SCREEN ===================== -->
-<div id="screen-login" class="screen">
+<!-- login starts hidden until auth state is determined -->
+<div id="screen-login" class="screen hidden">
   <div class="login-container">
     <h2>MathPath</h2>
+    <p style="text-align:center;font-size:0.8rem;color:var(--text2);margin-top:-0.5rem;">Adaptive Mathematics Practice</p>
     <input id="login-email" type="email" placeholder="Email" autocomplete="username">
     <input id="login-password" type="password" placeholder="Password" autocomplete="current-password">
     <div class="login-buttons">
@@ -139,7 +147,6 @@
         <input id="diag-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
         <button class="btn-submit" onclick="submitDiag()">Submit</button>
         <button id="hints-btn-diag" class="btn-submit btn-hints" onclick="toggleHints()">Hints</button>
-        <button id="calc-toggle-btn-diag" class="btn-submit btn-hints calc-toggle-btn" onclick="toggleCalcSlider()">Calc</button>
       </div>
       <p id="diag-fb" class="feedback"></p>
 
@@ -202,7 +209,6 @@
           <input id="prac-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
           <button class="btn-submit" onclick="submitPractice()">Submit</button>
           <button id="hints-btn" class="btn-submit btn-hints" onclick="toggleHints()">Hints</button>
-          <button id="calc-toggle-btn" class="btn-submit btn-hints calc-toggle-btn" onclick="toggleCalcSlider()">Calc</button>
         </div>
         <p id="prac-fb" class="feedback"></p>
       </div>
@@ -214,7 +220,7 @@
           <div class="mode-toggles">
             <button id="btn-text-mode" class="btn-mode active" onclick="toggleSolutionMode('text')">Text</button>
             <button id="btn-draw-mode" class="btn-mode" onclick="toggleSolutionMode('draw')">Draw</button>
-            <button id="btn-calc-mode" class="btn-mode mobile-only" onclick="toggleSolutionMode('calc')">Calc</button>
+            <button id="btn-calc-mode" class="btn-mode" onclick="toggleSolutionMode('calc')">Calc</button>
           </div>
           <button id="btn-undo" class="btn-undo-work" onclick="undoWork()">Undo</button>
           <button class="btn-clear-work" onclick="clearWork()">Clear</button>
@@ -302,5 +308,12 @@
 </div>
 
 <script src="script.js"></script>
+<script>
+// remove loader after initial routing
+window.addEventListener('load', () => {
+  const ov = document.getElementById('loading-overlay')
+  if (ov) ov.parentNode.removeChild(ov)
+})
+</script>
 </body>
 </html>

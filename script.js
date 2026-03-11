@@ -25,28 +25,138 @@ let practiceTopic = null, currentAnswer = null
 // ===========================
 // available palettes (css var overrides)
 const PALETTES = {
+  // ── Dark themes ──────────────────────────────────────────────
   default: {
     '--bg': '#0c0e16',
     '--surface': '#13151f',
+    '--surface2': '#1c1f2e',
+    '--surface3': '#242840',
+    '--border': '#2a2d42',
+    '--text': '#e4e6f0',
+    '--text2': '#8289a8',
+    '--text3': '#555d7a',
     '--accent': '#5b6ef5',
-    '--accent-h': '#7c8fff'
+    '--accent-h': '#7c8fff',
+    '--green': '#00d4aa',
+    '--yellow': '#ffd166',
+    '--red': '#ff6b6b'
   },
   ocean: {
-    '--bg': '#06283d',
-    '--surface': '#0a1f44',
-    '--accent': '#256d85',
-    '--accent-h': '#dff6ff'
+    '--bg': '#05192d',
+    '--surface': '#0a2540',
+    '--surface2': '#0e2f50',
+    '--surface3': '#133660',
+    '--border': '#1a4270',
+    '--text': '#d6eeff',
+    '--text2': '#6ea8d0',
+    '--text3': '#3a6a90',
+    '--accent': '#00aaff',
+    '--accent-h': '#44ccff',
+    '--green': '#00e5a0',
+    '--yellow': '#ffd166',
+    '--red': '#ff6b6b'
   },
   sunset: {
-    '--bg': '#2e001e',
-    '--surface': '#3a002a',
-    '--accent': '#ff6b6b',
-    '--accent-h': '#ffc6c6'
+    '--bg': '#1a0510',
+    '--surface': '#26081c',
+    '--surface2': '#330d26',
+    '--surface3': '#401230',
+    '--border': '#5a1a40',
+    '--text': '#fce8f0',
+    '--text2': '#c07090',
+    '--text3': '#804060',
+    '--accent': '#ff4d8c',
+    '--accent-h': '#ff88b8',
+    '--green': '#00e5a0',
+    '--yellow': '#ffd166',
+    '--red': '#ff6b6b'
+  },
+  forest: {
+    '--bg': '#071510',
+    '--surface': '#0e2218',
+    '--surface2': '#152e20',
+    '--surface3': '#1c3a28',
+    '--border': '#234830',
+    '--text': '#d4f0e0',
+    '--text2': '#6aaa80',
+    '--text3': '#3a7050',
+    '--accent': '#00c86e',
+    '--accent-h': '#40e890',
+    '--green': '#00e5a0',
+    '--yellow': '#ffd166',
+    '--red': '#ff6b6b'
+  },
+  ember: {
+    '--bg': '#150800',
+    '--surface': '#221200',
+    '--surface2': '#2e1a00',
+    '--surface3': '#3a2200',
+    '--border': '#4d2e00',
+    '--text': '#fff0e0',
+    '--text2': '#c08050',
+    '--text3': '#805030',
+    '--accent': '#ff8c00',
+    '--accent-h': '#ffb84d',
+    '--green': '#00d4aa',
+    '--yellow': '#ffd166',
+    '--red': '#ff6b6b'
+  },
+  violet: {
+    '--bg': '#10081a',
+    '--surface': '#1a1028',
+    '--surface2': '#221838',
+    '--surface3': '#2c2048',
+    '--border': '#3a2860',
+    '--text': '#ede0ff',
+    '--text2': '#9070c0',
+    '--text3': '#604880',
+    '--accent': '#a855f7',
+    '--accent-h': '#d088ff',
+    '--green': '#00d4aa',
+    '--yellow': '#ffd166',
+    '--red': '#ff6b6b'
+  },
+  // ── Light themes ─────────────────────────────────────────────
+  snow: {
+    '--bg': '#f4f6fb',
+    '--surface': '#ffffff',
+    '--surface2': '#edf0f7',
+    '--surface3': '#dde2ee',
+    '--border': '#c8cfe0',
+    '--text': '#1a1f36',
+    '--text2': '#5a6480',
+    '--text3': '#9aa0b8',
+    '--accent': '#5b6ef5',
+    '--accent-h': '#3a50e0',
+    '--green': '#00a880',
+    '--yellow': '#e09000',
+    '--red': '#e03030'
+  },
+  rose: {
+    '--bg': '#fdf4f7',
+    '--surface': '#ffffff',
+    '--surface2': '#fce8f0',
+    '--surface3': '#f8d0e2',
+    '--border': '#f0b0cc',
+    '--text': '#2a1020',
+    '--text2': '#804060',
+    '--text3': '#c080a0',
+    '--accent': '#e0306a',
+    '--accent-h': '#c01850',
+    '--green': '#00a880',
+    '--yellow': '#e09000',
+    '--red': '#cc1040'
   }
 }
 
 function applyPalette(name) {
   const vars = PALETTES[name] || PALETTES.default
+  // First reset all possible theme vars to default values so switching from
+  // a full-override palette back to a partial one doesn't leave stale values.
+  const defaults = PALETTES.default
+  Object.keys(defaults).forEach(k => {
+    document.documentElement.style.setProperty(k, defaults[k])
+  })
   Object.keys(vars).forEach(k => {
     document.documentElement.style.setProperty(k, vars[k])
   })
@@ -84,7 +194,96 @@ function selectPalette(name) {
 // ===========================
 // ROUTING
 // ===========================
+function saveLastState(state) {
+  try { localStorage.setItem('lastState', JSON.stringify(state)) } catch {}
+}
+
+// practice/diagnostic session persistence (cleared when user leaves these screens)
+function savePracticeState() {
+  if (!practiceTopic) return
+  const prob = {
+    question: document.getElementById('prac-q')?.innerHTML || '',
+    answer: currentAnswer,
+  }
+  const state = {
+    topic: practiceTopic,
+    difficulty: diff[practiceTopic],
+    problem: prob,
+    input: document.getElementById('prac-inp')?.value || '',
+    feedback: document.getElementById('prac-fb')?.textContent || '',
+    fbClass: document.getElementById('prac-fb')?.className.replace(/^feedback\s*/, '') || '',
+    work: document.getElementById('work-area')?.value || ''
+  }
+  try { sessionStorage.setItem('practiceState', JSON.stringify(state)) } catch {}
+}
+
+function clearPracticeState() {
+  try { sessionStorage.removeItem('practiceState') } catch {}
+}
+
+function loadPracticeState() {
+  try {
+    const raw = sessionStorage.getItem('practiceState')
+    if (!raw) return false
+    const s = JSON.parse(raw)
+    if (s.topic && TOPICS.includes(s.topic)) {
+      practiceTopic = s.topic
+      diff[s.topic] = s.difficulty || diff[s.topic]
+      updatePracticeMeta()
+      const qElem = document.getElementById('prac-q')
+      if (qElem) qElem.innerHTML = s.problem.question || ''
+      currentAnswer = s.problem.answer
+      const inp = document.getElementById('prac-inp')
+      if (inp) inp.value = s.input || ''
+      setFeedback('prac-fb', s.feedback || '', s.fbClass || '')
+      const work = document.getElementById('work-area')
+      if (work) work.value = s.work || ''
+      // ensure UI mode/reset
+      toggleSolutionMode('text')
+      return true
+    }
+  } catch(e) {}
+  return false
+}
+
+function saveDiagState() {
+  if (!diagQs || diagQs.length === 0) return
+  const state = { diagQs, diagIdx, diagScores, diagSeconds }
+  try { sessionStorage.setItem('diagState', JSON.stringify(state)) } catch {}
+}
+
+function clearDiagState() {
+  try { sessionStorage.removeItem('diagState') } catch {}
+}
+
+function loadDiagState() {
+  try {
+    const raw = sessionStorage.getItem('diagState')
+    if (!raw) return false
+    const s = JSON.parse(raw)
+    if (Array.isArray(s.diagQs)) {
+      diagQs = s.diagQs
+      diagIdx = s.diagIdx || 0
+      diagScores = s.diagScores || { arithmetic:0, algebra:0, geometry:0 }
+      diagSeconds = typeof s.diagSeconds === 'number' ? s.diagSeconds : 20*60
+      // make sure the diagnostic screen is visible before updating
+      showScreen('screen-diag')
+      // re-render question and restart timer
+      renderDiagQ()
+      startDiagTimer()
+      return true
+    }
+  } catch(e) {}
+  return false
+}
+
 function showScreen(id) {
+  // record the screen in case user reloads
+  const state = { screen: id };
+  if (id === 'screen-practice' && practiceTopic) state.topic = practiceTopic;
+  if (id === 'screen-diag') state.screen = 'screen-diag';
+  saveLastState(state);
+
   // hide any open hint panel when navigating screens
   const panel = document.getElementById('hint-panel')
   if (panel && panel.classList.contains('open')) panel.classList.remove('open')
@@ -99,15 +298,68 @@ function showScreen(id) {
   document.getElementById(id).classList.remove('hidden')
 }
 
+function resetCalculator() {
+  // clear input, result, and history rows so the calculator starts fresh
+  const inp = document.getElementById('calc-input')
+  if (inp) inp.value = ''
+  const res = document.getElementById('calc-result')
+  if (res) res.textContent = ''
+  const hist = document.getElementById('calc-hist')
+  if (hist) hist.innerHTML = ''
+}
+
+function restoreLastState() {
+  try {
+    const raw = localStorage.getItem('lastState')
+    if (!raw) return false
+    const s = JSON.parse(raw)
+    if (s.screen === 'screen-practice' && s.topic && TOPICS.includes(s.topic)) {
+      goToPractice(s.topic)
+      return true
+    }
+    if (s.screen === 'screen-diag') {
+      // try sessionStorage first (covers simple refresh)
+      if (loadDiagState()) {
+        return true
+      }
+      // if Firestore already populated diagQs (from loadProgress), resume it
+      if (diagQs && diagQs.length > 0) {
+        showScreen('screen-diag')
+        renderDiagQ()
+        startDiagTimer()
+        return true
+      }
+      // otherwise start a brand new diagnostic
+      startDiagnostic()
+      return true
+    }
+  } catch(e) {
+    // ignore parse errors
+  }
+  return false
+}
+
 function goHome() {
   // stop diagnostic timer in case we were on that screen
   stopDiagTimer()
+
+  // clear any transient session storage from practice / diagnostic
+  clearPracticeState()
+  clearDiagState()
+
+  // reset calculator state whenever we return to the dashboard
+  resetCalculator()
+  // ensure panel is closed/minimized (if visible on wide screens)
+  hideCalc()
 
   if (auth && auth.currentUser) {
     // optionally load fresh progress
     loadProgress(auth.currentUser.uid)
       .then(() => {
-        showScreen('screen-home'); renderDashboard(); initPalettePicker()
+        // try to resume the last screen; fall back to home dashboard
+        if (!restoreLastState()) {
+          showScreen('screen-home'); renderDashboard(); initPalettePicker()
+        }
       })
   } else {
     showScreen('screen-home'); renderDashboard(); initPalettePicker()
@@ -149,10 +401,12 @@ function updateDiagTimerDisplay() {
 }
 
 function startDiagTimer() {
-  diagSeconds = 20 * 60
+  // if diagSeconds already set (from session) use it, otherwise default
+  if (typeof diagSeconds !== 'number' || diagSeconds <= 0) diagSeconds = 20 * 60
   updateDiagTimerDisplay()
   diagTimer = setInterval(() => {
     diagSeconds--
+    saveDiagState()
     if (diagSeconds <= 0) {
       clearInterval(diagTimer)
       diagTimer = null
@@ -219,6 +473,7 @@ function startDiagnostic() {
 
 function renderDiagQ() {
   const tot = diagQs.length
+  saveDiagState()
   document.getElementById('diag-counter').textContent = `${diagIdx + 1} / ${tot}`
   document.getElementById('diag-prog').style.width = (diagIdx / tot * 100) + '%'
 
@@ -276,6 +531,10 @@ function finishDiag() {
   // clear timer as soon as we finish
   stopDiagTimer()
 
+  // diagnostic complete; drop any stored session state
+  clearDiagState()
+  if (auth && auth.currentUser) saveProgress(auth.currentUser.uid)
+
   hasDiag = true
   TOPICS.forEach(t => {
     const correct = diagScores[t]
@@ -307,11 +566,27 @@ function goToPractice(topic) {
   const labels = { arithmetic: 'Arithmetic', algebra: 'Algebra', geometry: 'Geometry' }
   document.getElementById('prac-title').textContent = labels[topic]
   updatePracticeMeta()
-  nextQ()
+  // attempt to restore session before generating new question
+  if (!loadPracticeState()) {
+    nextQ()
+  }
   showScreen('screen-practice')
 
-  // always start with calculator hidden/minified; user can open manually
+  // show/hide Calc mode button based on topic
+  const calcModeBtn = document.getElementById('btn-calc-mode')
+  if (calcModeBtn) {
+    calcModeBtn.style.display = (topic === 'arithmetic') ? 'none' : ''
+  }
+
+  // always start with calculator hidden; for arithmetic don't show at all
   hideCalc()
+  if (topic === 'arithmetic') {
+    const panel = document.getElementById('calc-panel')
+    if (panel) {
+      panel.classList.add('calc-off')
+      panel.classList.remove('slide-open')
+    }
+  }
 }
 
 function updatePracticeMeta() {
@@ -345,6 +620,7 @@ function nextQ() {
   clearWork()
   toggleSolutionMode('text')
   document.getElementById('prac-inp').focus()
+  savePracticeState()
 }
 
 function submitPractice() {
@@ -353,6 +629,9 @@ function submitPractice() {
   const t = practiceTopic
 
   setFeedback('prac-fb', ok ? '✓  Correct!' : '✗  Answer: ' + currentAnswer, ok ? 'correct' : 'incorrect')
+
+  // save in case user reloads before next question
+  savePracticeState()
 
   // === adaptive difficulty support ===
   // maintain a simple streak counter that increments on correct answers
@@ -722,6 +1001,8 @@ function handleTouch(e) {
 }
 
 function toggleSolutionMode(mode, prefix = '') {
+  // block calc mode entirely for arithmetic
+  if (mode === 'calc' && practiceTopic === 'arithmetic') return
   // hide/minimize calculator whenever we leave calc mode; on phones
   // this is a no‑op because hideCalc returns early
   if (mode !== 'calc') hideCalc()
@@ -943,6 +1224,8 @@ window.addEventListener('load', repositionCalc);
 
 // toggle calculator visibility by sliding on small phones
 function toggleCalcSlider() {
+  // no calculator for arithmetic
+  if (practiceTopic === 'arithmetic') return
   const panel = document.getElementById('calc-panel');
   if (!panel) return;
   // always slide on phones (<=767px)
@@ -1359,6 +1642,7 @@ style.textContent = `
   }
 `
 document.head.appendChild(style)
+
 
 // ===========================
 // KEYBOARD

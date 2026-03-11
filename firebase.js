@@ -18,6 +18,11 @@ function initFirebase() {
   try {
     firebase.initializeApp(firebaseConfig)
     auth = firebase.auth()
+    // ensure the user's session persists across page reloads/browser restarts
+    // (LOCAL is the default, but being explicit prevents surprises)
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .catch(e => console.warn('Failed to set auth persistence', e))
+
     db = firebase.firestore()
     // listen for auth state changes
     auth.onAuthStateChanged(user => {
@@ -31,7 +36,20 @@ function initFirebase() {
         })
         logoutBtns.forEach(b => b.style.display = 'inline-block')
 
-        loadProgress(user.uid).then(() => goHome())
+        loadProgress(user.uid).then(() => {
+          // prefer restoring wherever the user left off
+          if (typeof restoreLastState === 'function' && restoreLastState()) {
+            // if the navigation was a reload, push state back to Firestore so
+            // the server only tracks diagnostics when the page is refreshed
+            const nav = performance.getEntriesByType('navigation')[0]
+            const isReload = nav ? nav.type === 'reload' : performance.navigation && performance.navigation.type === 1
+            if (isReload && diagQs && diagIdx < diagQs.length) {
+              saveProgress(user.uid)
+            }
+            return
+          }
+          goHome()
+        })
       } else {
         if (infoEls.length) infoEls.forEach(el => {
           el.textContent = 'Not logged in';
@@ -39,6 +57,8 @@ function initFirebase() {
           el.classList.remove('logged-in');
         })
         logoutBtns.forEach(b => b.style.display = 'none')
+        // clear any stored navigation state so new sessions start from dashboard
+        try { localStorage.removeItem('lastState') } catch {}
         // reset to default palette when nobody is signed in
         palette = 'default'
         if (typeof applyPalette === 'function') applyPalette(palette)
@@ -53,6 +73,15 @@ function initFirebase() {
 async function saveProgress(uid) {
   if (!db || !uid) return
   const data = { mastery, diff, streak, hasDiag, diagPasses, lastUpdated: Date.now(), palette }
+  // include diagnostic session if one is active
+  if (diagQs && diagIdx < diagQs.length) {
+    data.diagState = {
+      diagQs,
+      diagIdx,
+      diagScores,
+      diagSeconds
+    }
+  }
   try { await db.collection('users').doc(uid).set(data) } catch(e) { console.warn(e) }
 }
 
@@ -73,6 +102,13 @@ async function loadProgress(uid) {
       if (data.palette) {
         palette = data.palette
         applyPalette(palette)
+      }
+      // restore diagnostic if Firestore has one saved
+      if (data.diagState && Array.isArray(data.diagState.diagQs)) {
+        diagQs = data.diagState.diagQs
+        diagIdx = data.diagState.diagIdx || 0
+        diagScores = data.diagState.diagScores || { arithmetic:0, algebra:0, geometry:0 }
+        diagSeconds = typeof data.diagState.diagSeconds === 'number' ? data.diagState.diagSeconds : 20*60
       }
       renderDashboard()
     }
