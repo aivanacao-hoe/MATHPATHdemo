@@ -6,7 +6,17 @@ let mastery = { arithmetic: 0, algebra: 0, geometry: 0 }
 let diff = { arithmetic: 'medium', algebra: 'medium', geometry: 'medium' }
 let streak = { arithmetic: { c: 0, w: 0 }, algebra: { c: 0, w: 0 }, geometry: { c: 0, w: 0 } }
 let diagQs = [], diagIdx = 0, diagScores = {}
-let diagPasses = { arithmetic: 0, algebra: 0, geometry: 0 } // count of successful (80%+) diagnostics
+// diagnostic timing state (20‑minute countdown)
+let diagTimer = null
+let diagSeconds = 0
+
+// keep the last few diagnostic percentages for each topic so we can
+// apply the "three in a row" rule with a sliding window
+let diagHistory = { arithmetic: [], algebra: [], geometry: [] }
+// this used to count straight 80%-plus passes; we still keep it for
+// backwards compatibility with any code that referenced it, but the
+// new mastery logic no longer relies solely on this value
+let diagPasses = { arithmetic: 0, algebra: 0, geometry: 0 }
 let hasDiag = false
 let practiceTopic = null, currentAnswer = null
 
@@ -75,11 +85,18 @@ function selectPalette(name) {
 // ROUTING
 // ===========================
 function showScreen(id) {
+  // hide any open hint panel when navigating screens
+  const panel = document.getElementById('hint-panel')
+  if (panel && panel.classList.contains('open')) panel.classList.remove('open')
+
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'))
   document.getElementById(id).classList.remove('hidden')
 }
 
 function goHome() {
+  // stop diagnostic timer in case we were on that screen
+  stopDiagTimer()
+
   if (auth && auth.currentUser) {
     // optionally load fresh progress
     loadProgress(auth.currentUser.uid)
@@ -115,32 +132,83 @@ function renderDashboard() {
 
 // ===========================
 // DIAGNOSTIC
+
+// timer utilities for the 20‑minute diagnostic session
+function updateDiagTimerDisplay() {
+  const el = document.getElementById('diag-timer')
+  if (!el) return
+  const m = Math.floor(diagSeconds / 60)
+  const s = diagSeconds % 60
+  el.textContent = `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function startDiagTimer() {
+  diagSeconds = 20 * 60
+  updateDiagTimerDisplay()
+  diagTimer = setInterval(() => {
+    diagSeconds--
+    if (diagSeconds <= 0) {
+      clearInterval(diagTimer)
+      diagTimer = null
+      alert('Time is up – submitting your responses.')
+      finishDiag()
+    } else {
+      updateDiagTimerDisplay()
+    }
+  }, 1000)
+}
+
+function stopDiagTimer() {
+  if (diagTimer) {
+    clearInterval(diagTimer)
+    diagTimer = null
+  }
+}
+
 // ===========================
+// choose `count` items from the end of an array (assuming later
+// entries are harder), then shuffle that subset.  used to make
+// diagnostics start with more challenging problems.
+function pickDiagItems(arr, count) {
+  const reversed = arr.slice().reverse()
+  return shuffle(reversed).slice(0, count)
+}
+
 function startDiagnostic() {
+  // ensure any prior timer is cleared before we begin a new one
+  stopDiagTimer()
   const bank = getBank()
   diagScores = { arithmetic: 0, algebra: 0, geometry: 0 }
   diagIdx = 0
 
-  // ensure geometry set always includes a couple of 'impossible' perimeter questions
+  // geometry diagnostics still include a couple of impossible items
   const geoItems = [...bank.geometry]
   const impossible = geoItems.filter(q => q.impossible)
   const normal = geoItems.filter(q => !q.impossible)
 
-  const geoSlice = shuffle(normal).slice(0, 14)
-  // if not enough impossible in bank, just proceed normally
+  const geoSlice = pickDiagItems(normal, 14)
   if (impossible.length > 0) {
     geoSlice.push(...shuffle(impossible).slice(0, Math.min(2, impossible.length)))
   }
-  const geoSet = shuffle(geoSlice).map(q => ({ ...q, topic: 'geometry' }))
+  const geoSet = geoSlice.map(q => ({ ...q, topic: 'geometry' }))
 
   const sets = TOPICS.map(t => {
     if (t === 'geometry') return geoSet
-    return shuffle([...bank[t]]).slice(0, 16).map(q => ({ ...q, topic: t }))
+    const items = pickDiagItems(bank[t], 16)
+    return items.map(q => ({ ...q, topic: t }))
   })
 
-  diagQs = shuffle(sets.flat())
+  // don't globally reshuffle; order reflects the harder-biased selection
+  diagQs = sets.flat()
   showScreen('screen-diag')
+  // clear any previous work and set up sheet
+  clearWork('diag-')
+  toggleSolutionMode('text','diag-')
+  initCanvas('diag-')
   renderDiagQ()
+
+  // start the countdown timer
+  startDiagTimer()
 }
 
 function renderDiagQ() {
@@ -156,6 +224,7 @@ function renderDiagQ() {
 
   document.getElementById('diag-inp').value = ''
   setFeedback('diag-fb', '', '')
+  clearWork('diag-')
   document.getElementById('diag-inp').focus()
 }
 
@@ -170,17 +239,53 @@ function submitDiag() {
   else setTimeout(finishDiag, 950)
 }
 
+// record the most recent score for a topic, keeping only the last
+// three diagnostics. this lets us evaluate the "three-in-a-row" rule
+function recordDiagScore(topic, percent) {
+  const hist = diagHistory[topic]
+  hist.push(percent)
+  if (hist.length > 3) hist.shift()
+}
+
+// decide whether the learner has satisfied the mastery condition for a
+// topic. the basic requirement is three consecutive diagnostics at 80% or
+// higher, but if two of those three are perfect (100%) the third score may
+// fall as low as 60% and still count. (the 60 value comes from taking the
+// 80 baseline and subtracting 10 for each prior perfect; you can adjust the
+// formula if you prefer a different curve.)
+function checkMasteryCondition(topic) {
+  const hist = diagHistory[topic]
+  if (hist.length < 3) return false
+
+  const last3 = hist.slice(-3)
+  const perfects = last3.filter(p => p === 100).length
+  let threshold = 80
+  if (perfects >= 2) threshold = 60
+
+  // all three of the most recent scores must clear the threshold
+  return last3.every(p => p >= threshold)
+}
+
 function finishDiag() {
+  // clear timer as soon as we finish
+  stopDiagTimer()
+
   hasDiag = true
   TOPICS.forEach(t => {
     const correct = diagScores[t]
     const percent = Math.round((correct / 16) * 100)
-    if (percent >= 80) {
-      // each strong show adds to mastery gradually
-      mastery[t] = Math.min(100, mastery[t] + 10)
-      diagPasses[t]++
+
+    recordDiagScore(t, percent)
+
+    // keep the old "pass" counter for reference; a pass is still defined
+    // as 80% or better on a single attempt
+    if (percent >= 80) diagPasses[t]++
+
+    if (checkMasteryCondition(t)) {
+      mastery[t] = 100
     } else {
-      // don't lower existing mastery, but reflect if current percent is higher
+      // until mastery is reached, show the highest percentage they've
+      // achieved so far so they can see progress
       mastery[t] = Math.max(mastery[t], percent)
     }
   })
@@ -244,38 +349,48 @@ function submitPractice() {
 
   setFeedback('prac-fb', ok ? '✓  Correct!' : '✗  Answer: ' + currentAnswer, ok ? 'correct' : 'incorrect')
 
-  // Update mastery based on correct/wrong and streak bonus
+  // === adaptive difficulty support ===
+  // maintain a simple streak counter that increments on correct answers
+  // and resets when the student gets one wrong; a few corrects in a row
+  // bump difficulty, while a single wrong drops it.
   if (ok) {
-    // Determine streak bonus: 1st correct +4%, 2nd +8%, 3rd+ +10%
-    let masteryGain = 2 // base gain
-    if (streak[t].c === 0) masteryGain += 2 // 1st correct: +4% total
-    else if (streak[t].c === 1) masteryGain += 6 // 2nd correct: +8% total
-    else masteryGain += 8 // 3rd+ correct: +10% total
-    mastery[t] = Math.min(100, mastery[t] + masteryGain)
     streak[t].c++
     streak[t].w = 0
   } else {
-    mastery[t] = Math.max(0, mastery[t] - 1)
     streak[t].w++
     streak[t].c = 0
   }
 
-  if (streak[t].c >= 3) {
-    if (diff[t] === 'easy') diff[t] = 'medium'
-    else if (diff[t] === 'medium') diff[t] = 'hard'
-    else if (diff[t] === 'hard') diff[t] = 'impossible'
-    streak[t].c = 0
-  }
-  if (streak[t].w >= 2) {
-    if (diff[t] === 'impossible') diff[t] = 'hard'
-    else if (diff[t] === 'hard') diff[t] = 'medium'
-    else if (diff[t] === 'medium') diff[t] = 'easy'
-    streak[t].w = 0
-  }
-
+  adjustDifficulty(t)          // possibly change diff[t]
   updatePracticeMeta()
+
   if (auth && auth.currentUser) saveProgress(auth.currentUser.uid)
   setTimeout(nextQ, 950)
+}
+
+// change difficulty for a topic to the given value and save
+function setDifficulty(topic, level) {
+  const order = ['easy','medium','hard','impossible']
+  if (!order.includes(level)) return
+  diff[topic] = level
+  if (auth && auth.currentUser) saveProgress(auth.currentUser.uid)
+}
+
+// examine the streaks and bump/drop difficulty as appropriate. simple
+// rule: three correct in a row → go up one level; any wrong answer → go
+// down one level (but not below easy) and clear the streak.
+function adjustDifficulty(topic) {
+  const order = ['easy','medium','hard','impossible']
+  const current = diff[topic]
+  const idx = order.indexOf(current)
+  if (streak[topic].c >= 3 && idx < order.length - 1) {
+    setDifficulty(topic, order[idx + 1])
+    streak[topic].c = 0 // start new streak at higher level
+  }
+  if (streak[topic].w >= 1 && idx > 0) {
+    setDifficulty(topic, order[idx - 1])
+    streak[topic].w = 0
+  }
 }
 
 // ===========================
@@ -284,24 +399,32 @@ function submitPractice() {
 function hideCalc() {
   const panel = document.getElementById('calc-panel')
   if (!panel) return
+  // only minimize the calculator; we no longer toggle an "off" state
+  // since that prevented clicks from reaching the eye button.
   panel.classList.add('calc-min')
   panel.classList.remove('calc-off')
-  // make sure opacity button remains visible even when minimized
+  // ensure opacity button remains visible
   const opbtn = document.getElementById('calc-opacity-tog')
-  if (opbtn) opbtn.style.display = 'block'
+  if (opbtn) {
+    opbtn.style.display = 'block'
+    opbtn.textContent = '👁‍🗨'
+  }
 }
 
 function showCalcPanel() {
   const panel = document.getElementById('calc-panel')
-  panel.classList.remove('calc-min')
-  // ensure opacity full when displayed
-  panel.style.opacity = '1'
+  panel.classList.remove('calc-min', 'calc-off')
+  // restore normal visuals
+  panel.style.opacity = ''
+  panel.style.background = ''
+  panel.style.borderColor = ''
   calcOpaque = true
-  // reset opacity button icon
+  // reset opacity button icon and make sure it's visible
   const opbtn = document.getElementById('calc-opacity-tog')
   if (opbtn) {
     opbtn.style.display = ''
     opbtn.textContent = '👁‍🗨'
+    opbtn.style.opacity = ''
   }
   // reset to default position when first opened
   if (!panel.dataset.dragInitialized) {
@@ -322,8 +445,19 @@ function toggleCalcOpacity() {
     return
   }
   calcOpaque = !calcOpaque
-  panel.style.opacity = calcOpaque ? '1' : '0'
-  // update button icon to indicate state
+  const inner = panel.querySelector('.calc-inner')
+  if (inner) inner.style.opacity = calcOpaque ? '1' : '0'
+
+  // when hiding inner we also remove the panel's visual frame so the
+  // whole calculator block disappears – only the eye button remains
+  if (!calcOpaque) {
+    panel.style.background = 'transparent'
+    panel.style.borderColor = 'transparent'
+  } else {
+    panel.style.background = ''
+    panel.style.borderColor = ''
+  }
+
   const btn = document.getElementById('calc-opacity-tog')
   if (btn) btn.textContent = calcOpaque ? '👁‍🗨' : '👁'
 }
@@ -342,7 +476,6 @@ function initCalcDrag() {
 
 function startCalcDrag(e) {
   const panel = document.getElementById('calc-panel')
-  if (panel.classList.contains('calc-off')) return
   calcDrag.active = true
   let clientX = e.clientX || (e.touches && e.touches[0].clientX)
   let clientY = e.clientY || (e.touches && e.touches[0].clientY)
@@ -395,25 +528,53 @@ function setFeedback(id, msg, cls) {
   el.className = 'feedback' + (cls ? ' ' + cls : '')
 }
 
-function clearWork() {
-  const workArea = document.getElementById('work-area')
+// utility to update the enabled/disabled state of undo button
+function updateUndoButton(prefix = '') {
+  let btn
+  if (prefix === 'diag-') {
+    btn = document.getElementById('btn-undo-diag')
+  } else {
+    btn = document.getElementById('btn-undo')
+  }
+  if (!btn) return
+  const stack = drawHistories[prefix] || []
+  btn.disabled = stack.length === 0
+}
+
+// clear whichever workspace is active (practice or diag)
+// prefix is an optional id fragment like 'diag-'; omit for practice.
+function clearWork(prefix = '') {
+  const workArea = document.getElementById(prefix + 'work-area')
   if (workArea) workArea.value = ''
   
-  const canvas = document.getElementById('draw-canvas')
+  const canvas = document.getElementById(prefix + 'draw-canvas')
   if (canvas) {
     const ctx = canvas.getContext('2d')
     ctx.fillStyle = 'white'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
   }
+  // reset undo history for this canvas
+  if (drawHistories[prefix]) drawHistories[prefix] = []
+  updateUndoButton(prefix)
 }
 
 let isDrawing = false
 let lastX = 0
 let lastY = 0
 
-function initCanvas() {
-  const canvas = document.getElementById('draw-canvas')
+// keep a stack of image snapshots for each canvas prefix so we can undo
+const drawHistories = { '': [], 'diag-': [] }
+
+// initialize a drawing canvas; prefix allows reusing for diag
+function initCanvas(prefix = '') {
+  const canvas = document.getElementById(prefix + 'draw-canvas')
   if (!canvas) return
+  
+  // whenever we install a fresh canvas (either first time or resized)
+  // clear the undo stack for that prefix; previous snapshots will be
+  // invalid due to size changes or manual clearing
+  if (drawHistories[prefix]) drawHistories[prefix] = []
+  updateUndoButton(prefix)
   
   const rect = canvas.parentElement.getBoundingClientRect()
   canvas.width = rect.width
@@ -432,29 +593,40 @@ function initCanvas() {
   canvas.addEventListener('touchend', stopDraw)
 }
 
-// resize listener: if the canvas is visible, reinitialize when the window changes
+// resize listener: if either canvas is visible, reinitialize it when the window changes
 window.addEventListener('resize', () => {
-  const canvas = document.getElementById('draw-canvas')
-  if (canvas && canvas.parentElement.classList.contains('active-mode')) {
-    initCanvas()
-  }
+  ['','diag-'].forEach(prefix => {
+    const canvas = document.getElementById(prefix + 'draw-canvas')
+    if (canvas && canvas.parentElement.classList.contains('active-mode')) {
+      initCanvas(prefix)
+    }
+  })
 })
 
 function startDraw(e) {
   isDrawing = true
-  const canvas = document.getElementById('draw-canvas')
+  const canvas = e.currentTarget || e.target
+  const prefix = canvas.id.startsWith('diag-') ? 'diag-' : ''
+  // save current state so we can undo this stroke later
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    drawHistories[prefix].push(snapshot)
+    updateUndoButton(prefix)
+  }
+
   const rect = canvas.getBoundingClientRect()
-  lastX = e.clientX - rect.left
-  lastY = e.clientY - rect.top
+  lastX = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left
+  lastY = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top
 }
 
 function draw(e) {
   if (!isDrawing) return
   
-  const canvas = document.getElementById('draw-canvas')
+  const canvas = e.currentTarget || e.target
   const rect = canvas.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
+  const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left
+  const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top
   
   const ctx = canvas.getContext('2d')
   ctx.strokeStyle = '#000'
@@ -474,20 +646,41 @@ function stopDraw() {
   isDrawing = false
 }
 
+// undo the last drawing stroke on the given workspace
+function undoWork(prefix = '') {
+  const canvas = document.getElementById(prefix + 'draw-canvas')
+  if (!canvas) return
+  const stack = drawHistories[prefix]
+  if (!stack || stack.length === 0) return
+  const ctx = canvas.getContext('2d')
+  const img = stack.pop()
+  ctx.putImageData(img, 0, 0)
+  updateUndoButton(prefix)
+}
+
 function handleTouch(e) {
   const touch = e.touches[0]
   const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 'mousemove', {
     clientX: touch.clientX,
     clientY: touch.clientY
   })
-  document.getElementById('draw-canvas').dispatchEvent(mouseEvent)
+  // dispatch to whichever canvas triggered the touch
+  const canvas = e.currentTarget || e.target || document.getElementById('draw-canvas')
+  canvas.dispatchEvent(mouseEvent)
 }
 
-function toggleSolutionMode(mode) {
-  const textContainer = document.getElementById('text-container')
-  const canvasContainer = document.getElementById('canvas-container')
-  const btnText = document.getElementById('btn-text-mode')
-  const btnDraw = document.getElementById('btn-draw-mode')
+function toggleSolutionMode(mode, prefix = '') {
+  // when switching modes we should also reset undo state for canvas if
+  // we're about to clear/re-init it; not strictly required but keeps the
+  // stacks from growing wildly
+  if (mode === 'draw') {
+    // don't clear history here; handled by initCanvas/clearWork when
+    // appropriate
+  }
+  const textContainer = document.getElementById(prefix + 'text-container')
+  const canvasContainer = document.getElementById(prefix + 'canvas-container')
+  const btnText = document.getElementById(prefix + 'btn-text-mode')
+  const btnDraw = document.getElementById(prefix + 'btn-draw-mode')
   
   if (mode === 'text') {
     textContainer.classList.add('active-mode')
@@ -499,7 +692,7 @@ function toggleSolutionMode(mode) {
     canvasContainer.classList.add('active-mode')
     btnText.classList.remove('active')
     btnDraw.classList.add('active')
-    setTimeout(() => initCanvas(), 50)
+    setTimeout(() => initCanvas(prefix), 50)
   }
 }
 
@@ -529,6 +722,119 @@ function formatQuestion(text, topic) {
 function rand(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a }
 function shuffle(arr) { return arr.sort(() => Math.random() - 0.5) }
 function fmt(n) { return Math.abs(n) >= 1000 ? n.toLocaleString() : String(n) }
+
+// ---------- hint panel logic ----------
+// static hint pools per category
+const hintPools = {
+  general: [
+    "Break the problem into smaller steps.",
+    "Read the question carefully and identify what it is asking.",
+    "Estimate the answer first to check if your result makes sense.",
+    "Look for patterns in the numbers.",
+    "Try rewriting the problem in a simpler way.",
+    "Double-check your calculations before moving on."
+  ],
+  arithmetic: [
+    "Remember the order of operations: PEMDAS (Parentheses, Exponents, Multiplication/Division, Addition/Subtraction).",
+    "Think of PEMDAS as P → E → MD → AS; multiplication and division happen together, then addition and subtraction.",
+    "Perform multiplication and division from left to right.",
+    "Perform addition and subtraction from left to right.",
+    "Simplify expressions step by step instead of trying to do everything at once.",
+    "Reduce fractions whenever possible.",
+    "Convert fractions, decimals, or percentages into the same form before comparing them.",
+    "Watch out for negative signs when adding or subtracting numbers.",
+    "If numbers look complicated, check if they share a common factor."
+  ],
+  algebra: [
+    "Identify the variable you are trying to solve for.",
+    "Simplify both sides of the equation before solving.",
+    "Combine like terms whenever possible.",
+    "Perform the same operation on both sides of the equation.",
+    "Move constants away from the variable step by step.",
+    "Check your signs when moving terms across the equals sign.",
+    "If an equation looks complicated, try rewriting it in a simpler form.",
+    "Substitute your answer back into the equation to verify it works.",
+    "Look for opportunities to factor expressions.",
+    "If you see a pattern, test it with simple numbers."
+  ],
+  geometry: [
+    "Draw a quick sketch of the figure if one is not provided.",
+    "Label all known sides, angles, and variables.",
+    "Break complex shapes into simpler shapes.",
+    "Check if the figure contains triangles, rectangles, or circles you recognize.",
+    "Remember that the angles in a triangle add up to 180 degrees.",
+    "Look for right angles or perpendicular lines.",
+    "Check for parallel lines which may create equal angles.",
+    "Use symmetry when shapes appear balanced or mirrored.",
+    "Look for similar triangles or congruent shapes.",
+    "Always check what measurement the question is asking for (length, angle, area, or perimeter)."
+  ]
+};
+
+let currentHints = [];
+let currentHintIdx = 0;
+
+function generateHints(topic) {
+  // topic may be 'arithmetic','algebra','geometry' or null for general/diag
+  let pool = hintPools.general.slice();
+  if (topic && hintPools[topic]) {
+    pool = pool.concat(hintPools[topic]);
+  }
+  // optionally add a couple of small example hints each time
+  pool.push("Example: isolate x by subtracting 3 from both sides.");
+  pool.push("Work step‑by‑step rather than trying to do everything at once.");
+  pool = shuffle(pool);
+  // limit size to keep navigation manageable
+  return pool.slice(0, Math.min(10, pool.length));
+}
+
+function showHint(idx) {
+  const el = document.getElementById('hint-text');
+  if (!el) return;
+  // fade effect
+  el.classList.add('fade');
+  setTimeout(() => {
+    el.textContent = currentHints[idx] || '';
+    el.classList.remove('fade');
+  }, 200);
+}
+
+function nextHint() {
+  if (currentHints.length === 0) return;
+  currentHintIdx = (currentHintIdx + 1) % currentHints.length;
+  showHint(currentHintIdx);
+}
+
+function prevHint() {
+  if (currentHints.length === 0) return;
+  currentHintIdx = (currentHintIdx - 1 + currentHints.length) % currentHints.length;
+  showHint(currentHintIdx);
+}
+
+function toggleHints() {
+  const panel = document.getElementById('hint-panel');
+  if (!panel) return;
+  const open = panel.classList.toggle('open');
+  if (open) {
+    const topic = practiceTopic || null; // use current practice topic if available
+    currentHints = generateHints(topic);
+    currentHintIdx = 0;
+    showHint(currentHintIdx);
+  }
+}
+
+// close if clicking outside panel (optional)
+document.addEventListener('click', e => {
+  const panel = document.getElementById('hint-panel');
+  const btn1 = document.getElementById('hints-btn');
+  const btn2 = document.getElementById('hints-btn-diag');
+  if (!panel) return;
+  if (panel.contains(e.target)) return;
+  if ((btn1 && btn1.contains(e.target)) || (btn2 && btn2.contains(e.target))) return;
+  if (panel.classList.contains('open')) toggleHints();
+});
+
+// end hint panel logic
 
 // ===========================
 // DIAGNOSTIC BANK
@@ -600,6 +906,11 @@ function getBank() {
       { q: 'Perimeter of a rectangle with length 10 and width 3', a: '26' },
       { q: 'Right triangle:   hypotenuse = 10,  one leg = 6.  Find the other leg.', a: '8' },
       { q: 'A triangle has angles of 30° and 70°.  Find the third angle.', a: '80' },
+      // special problems added for curriculum sequence
+      { q: 'Circumference of a circle with radius 7 (π = 3.14)', a: '43.96', level: 'easy' },
+      { q: 'A right triangle has one leg twice as long as the other. Hypotenuse = 10 cm. Find the legs (simplest radical form).', a: '√20 and 2√20', level: 'medium' },
+      { q: 'Semicircle on base of isosceles triangle (apex angle 90°, sides 10 cm). Area of region inside semicircle but outside triangle (in terms of π).', a: '25π-50', level: 'hard' },
+      { q: 'Two circles diameters 6 cm and 10 cm sit on a line. A 60° tangent touches each. Horizontal distance between tangency points?', a: '2√3', impossible: true, level: 'impossible' },
     ]
   }
 }
@@ -632,6 +943,28 @@ getBank = function() {
 // ===========================
 // PROBLEM GENERATOR
 // ===========================
+
+// special, hand‑crafted geometry items that correspond to the
+// easy/medium/hard/impossible sequence described by the user.
+const SPECIAL_GEO = {
+  easy: {
+    question: 'Circumference of a circle with radius 7 (π = 3.14)',
+    answer: '43.96'
+  },
+  medium: {
+    question: 'A right triangle has one leg twice as long as the other. Hypotenuse = 10 cm. Find the legs (simplest radical form).',
+    answer: '√20 and 2√20'
+  },
+  hard: {
+    question: 'Semicircle on base of isosceles triangle (apex angle 90°, sides 10 cm). Area of region inside semicircle but outside triangle (in terms of π).',
+    answer: '25π-50'
+  },
+  impossible: {
+    question: 'Two circles diameters 6 cm and 10 cm sit on a line. A 60° tangent touches each. Horizontal distance between tangency points?',
+    answer: '2√3'
+  }
+}
+
 function generateProblem(topic, difficulty) {
   if (topic === 'arithmetic') return genArith(difficulty)
   if (topic === 'algebra')    return genAlgebra(difficulty)
@@ -639,50 +972,86 @@ function generateProblem(topic, difficulty) {
 }
 
 function genArith(d) {
-  const easy = [1, 2, 3], med = [2, 3, 4, 5], hard = [4, 5, 6, 7]
-  const pool = d === 'easy' ? easy : d === 'medium' ? med : hard
-  const type = pool[rand(0, pool.length - 1)]
-  let A = rand(2, 15), B = rand(2, 15), C = rand(2, 10), D = rand(2, 8)
-
-  if (type === 1) {
-    const ops = [['+', A + B], ['−', A - B], ['×', A * B]]
-    const [op, ans] = ops[rand(0, 2)]
-    return { question: `Evaluate:   ${fmt(A)}  ${op}  ${fmt(B)}`, answer: ans }
+  // pool index corresponds to a template in arithTemplates below
+  const poolMap = {
+    easy: [0, 1, 2],
+    medium: [1, 2, 3, 4],
+    hard: [3, 4, 5, 6]
   }
-  if (type === 2) {
-    const ans = A + B * C
-    return { question: `Evaluate:   ${fmt(A)} + ${fmt(B)} × ${fmt(C)}`, answer: ans }
-  }
-  if (type === 3) {
-    const ans = (A + B) * C
-    return { question: `Evaluate:   (${fmt(A)} + ${fmt(B)}) × ${fmt(C)}`, answer: ans }
-  }
-  if (type === 4) {
-    const ans = A + B * (C + D)
-    return { question: `Evaluate:   ${fmt(A)} + ${fmt(B)} × (${fmt(C)} + ${fmt(D)})`, answer: ans }
-  }
-  if (type === 5) {
-    const ans = (A + B) * (C - D < 1 ? C : C - D)
-    const sub = C - D < 1 ? C : C - D
-    return { question: `Evaluate:   (${fmt(A)} + ${fmt(B)}) × (${fmt(C)} − ${fmt(C - sub)})`, answer: (A + B) * sub }
-  }
-  if (type === 6) {
-    const sq = rand(2, 8)
-    const ans = A + B * (C + sq * sq)
-    return { question: `Evaluate:   ${fmt(A)} + ${fmt(B)} × (${fmt(C)} + ${fmt(sq)}²)`, answer: ans }
-  }
-  if (type === 7) {
-    const base = rand(2, 9)
-    const ans = A * base * base - B * C
-    return { question: `Evaluate:   ${fmt(A)} × ${fmt(base)}² − ${fmt(B)} × ${fmt(C)}`, answer: ans }
-  }
+  const pool = poolMap[d] || poolMap.medium
+  const idx = pool[rand(0, pool.length - 1)]
+  return arithTemplates[idx]()
 }
 
+// generators for the arithmetic templates used above
+const arithTemplates = [
+  // simple two‑number operation
+  () => {
+    const A = rand(2, 15), B = rand(2, 15)
+    const ops = [['+', A + B], ['−', A - B], ['×', A * B]]
+    const [op, ans] = ops[rand(0, ops.length - 1)]
+    return { question: `Evaluate:   ${fmt(A)}  ${op}  ${fmt(B)}`, answer: ans }
+  },
+  // A + B × C
+  () => {
+    const A = rand(2, 15), B = rand(2, 15), C = rand(2, 10)
+    return { question: `Evaluate:   ${fmt(A)} + ${fmt(B)} × ${fmt(C)}`, answer: A + B * C }
+  },
+  // (A + B) × C
+  () => {
+    const A = rand(2, 15), B = rand(2, 15), C = rand(2, 10)
+    return { question: `Evaluate:   (${fmt(A)} + ${fmt(B)}) × ${fmt(C)}`, answer: (A + B) * C }
+  },
+  // A + B × (C + D)
+  () => {
+    const A = rand(2, 15), B = rand(2, 15), C = rand(2, 10), D = rand(2, 8)
+    return { question: `Evaluate:   ${fmt(A)} + ${fmt(B)} × (${fmt(C)} + ${fmt(D)})`,
+             answer: A + B * (C + D) }
+  },
+  // (A+B)×(C−E) where E chosen so expression stays positive
+  () => {
+    const A = rand(2, 15), B = rand(2, 15), C = rand(2, 10), D = rand(2, 8)
+    const sub = C - D < 1 ? C : C - D
+    return { question: `Evaluate:   (${fmt(A)} + ${fmt(B)}) × (${fmt(C)} − ${fmt(C - sub)})`,
+             answer: (A + B) * sub }
+  },
+  // A + B × (C + sq²)
+  () => {
+    const A = rand(2, 15), B = rand(2, 15), C = rand(2, 10)
+    const sq = rand(2, 8)
+    return { question: `Evaluate:   ${fmt(A)} + ${fmt(B)} × (${fmt(C)} + ${fmt(sq)}²)`,
+             answer: A + B * (C + sq * sq) }
+  },
+  // A × base² − B × C
+  () => {
+    const A = rand(2, 15), B = rand(2, 15), C = rand(2, 10)
+    const base = rand(2, 9)
+    return { question: `Evaluate:   ${fmt(A)} × ${fmt(base)}² − ${fmt(B)} × ${fmt(C)}`,
+             answer: A * base * base - B * C }
+  }
+];
+
 function genAlgebra(d) {
-  const easy = [1, 2], med = [1, 2, 3, 4], hard = [3, 4, 5, 6]
-  const pool = d === 'easy' ? easy : d === 'medium' ? med : hard
-  const type = pool[rand(0, pool.length - 1)]
-  let x = rand(1, 12), a = rand(2, 9), b = rand(1, 15), c = rand(2, 6)
+  const easyPool = [1, 2]
+  const medPool = [1, 2, 3, 4]
+  const hardPool = [3, 4, 5, 6]
+  const pool = d === 'easy' ? easyPool : d === 'medium' ? medPool : hardPool
+
+  // parameters for the chosen problem; regenerate until valid
+  let type, x, a, b, c, valid
+  do {
+    type = pool[rand(0, pool.length - 1)]
+    x = rand(1, 12)
+    a = rand(2, 9)
+    b = rand(1, 15)
+    c = rand(2, 6)
+    valid = true
+    if (type === 3 && a === c) valid = false  // avoid canceling x
+    if (type === 5) {
+      const result = a * x + b
+      if (result % c !== 0) valid = false     // need integer division
+    }
+  } while (!valid)
 
   if (type === 1) {
     const result = a * x + b
@@ -693,10 +1062,7 @@ function genAlgebra(d) {
     return { question: `Solve for x:   x + ${fmt(b)} = ${fmt(result)}`, answer: x }
   }
   if (type === 3) {
-    // ax + b = cx + d
-    const extra = rand(1, 8)
     const d = (a - c) * x + b
-    if (a === c) return genAlgebra(d)
     return { question: `Solve for x:   ${a}x + ${fmt(b)} = ${c}x + ${fmt(d)}`, answer: x }
   }
   if (type === 4) {
@@ -704,9 +1070,8 @@ function genAlgebra(d) {
     return { question: `Solve for x:   ${a}(x + ${b}) = ${fmt(result)}`, answer: x }
   }
   if (type === 5) {
-    const result = (a * x + b)
-    if (result % c !== 0) return genAlgebra(d)
-    return { question: `Solve for x:   (${a}x + ${b}) ÷ ${c} = ${fmt(result / c)}`, answer: x }
+    const result = (a * x + b) / c
+    return { question: `Solve for x:   (${a}x + ${b}) ÷ ${c} = ${fmt(result)}`, answer: x }
   }
   if (type === 6) {
     const k = x * x
@@ -715,17 +1080,38 @@ function genAlgebra(d) {
 }
 
 function genGeo(d) {
+  // first, maybe hand‑picked special item
+  if (SPECIAL_GEO[d] && (d === 'impossible' || Math.random() < 0.3)) {
+    return { question: SPECIAL_GEO[d].question, answer: SPECIAL_GEO[d].answer }
+  }
+
+  // impossible difficulty gets its own perimeter routine
   if (d === 'impossible') {
-    // extremely large or decimal sides, perimeter questions only
     const L = (Math.random() * 200 + 50).toFixed(2)
     const W = (Math.random() * 150 + 30).toFixed(2)
     const per = (2 * (parseFloat(L) + parseFloat(W))).toFixed(2)
     return { question: `Find the perimeter of a rectangle.\n  Length = ${L},   Width = ${W}`, answer: per }
   }
 
-  const easy = [1, 2, 3], med = [1, 2, 3, 4, 5], hard = [3, 4, 5, 6, 7]
-  const pool = d === 'easy' ? easy : d === 'medium' ? med : hard
-  const type = pool[rand(0, pool.length - 1)]
+  const easyPool = [1, 2, 3]
+  const medPool = [1, 2, 3, 4, 5]
+  const hardPool = [3, 4, 5, 6, 7]
+  const pool = d === 'easy' ? easyPool : d === 'medium' ? medPool : hardPool
+
+  // some choices need to reroll until they meet constraints
+  let type
+  while (true) {
+    type = pool[rand(0, pool.length - 1)]
+    if (type === 7) {
+      const a1 = rand(30, 80), a2 = rand(30, 80)
+      if (a1 + a2 < 180) {
+        return { question: `A triangle has angles of ${a1}° and ${a2}°.\n  Find the third angle.`, answer: 180 - a1 - a2 }
+      }
+      // otherwise reroll type entirely
+      continue
+    }
+    break
+  }
 
   if (type === 1) {
     const L = rand(3, 25), W = rand(3, 25)
@@ -751,11 +1137,6 @@ function genGeo(d) {
     const triples = [[3,4,5],[5,12,13],[8,15,17],[6,8,10],[9,12,15],[7,24,25]]
     const [a, b, c] = triples[rand(0, triples.length - 1)]
     return { question: `Right triangle with legs ${a} and ${b}.\n  Find the hypotenuse.`, answer: c }
-  }
-  if (type === 7) {
-    const a1 = rand(30, 80), a2 = rand(30, 80)
-    if (a1 + a2 >= 180) return genGeo(d)
-    return { question: `A triangle has angles of ${a1}° and ${a2}°.\n  Find the third angle.`, answer: 180 - a1 - a2 }
   }
 }
 

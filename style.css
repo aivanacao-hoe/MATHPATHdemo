@@ -549,8 +549,24 @@ body {
   cursor: move;
 }
 
+/* when the calculator is put "off" we no longer hide the entire
+   panel, just collapse everything except the opacity-toggle button
+   so the user can still bring it back.  toggle styles that were
+   previously part of the calc-min rule are left in place. */
 .calc-panel.calc-off {
+  /* keep a small footprint so the toggle button stays accessible */
+  width: 40px;
+  height: 40px;
+  /* panel remains fully opaque so children can be seen */
+  overflow: visible;
+}
+.calc-panel.calc-off .calc-inner {
   display: none;
+}
+.calc-panel.calc-off .calc-opacity-btn {
+  display: block;
+  opacity: 1;
+  /* pointer-events default allows clicks */
 }
 
 /* reduce width on tablets/mobiles when absolute bubble might be too big */
@@ -577,6 +593,13 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+/* when the sheet is used on the diagnostic screen we want it
+   to occupy the full available height and width since the layout
+   is vertical rather than side-by-side */
+#screen-diag .solution-panel {
+  flex: 1 0 auto;
+  max-width: 100%;
 }
 
 .solution-header {
@@ -651,6 +674,30 @@ body {
   transform: scale(0.95);
 }
 
+/* undo button uses same base styles as clear but with accent hover */
+.btn-undo-work {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-right: 0.5rem; /* keep some spacing before the clear button */
+}
+
+.btn-undo-work:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-undo-work:active {
+  transform: scale(0.95);
+}
+
 .work-area {
   flex: 1;
   background: var(--bg);
@@ -679,6 +726,82 @@ body {
 
 .work-container.active-mode {
   display: flex;
+}
+
+/* ---------- hint panel styles ---------- */
+.hint-panel {
+  position: fixed;
+  top: 0;
+  right: -320px; /* hidden by default */
+  width: 300px;
+  max-width: 80vw;
+  height: 100%;
+  background: var(--surface);
+  box-shadow: -4px 0 8px rgba(0,0,0,0.2);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+}
+.hint-panel.open {
+  right: 0;
+}
+.hint-close {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text2);
+}
+.hint-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+.hint-text {
+  background: var(--bg);
+  color: var(--text);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.4;
+  min-height: 80px;
+  width: 100%;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+.hint-text.fade {
+  opacity: 0.2;
+}
+.hint-nav {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+.hint-nav-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* hints button in answer row */
+.btn-hints {
+  margin-left: 0.5rem;
 }
 
 .canvas-container {
@@ -979,11 +1102,17 @@ body {
   }
 
   .calc-panel.calc-off {
-    width: 100%;
-    max-height: 0;
-    opacity: 0;
-    pointer-events: none;
-    border-top: none;
+    /* same off‑state on mobile but keep the eye button visible */
+    width: 40px;
+    height: 40px;
+    overflow: visible;
+  }
+  .calc-panel.calc-off .calc-inner {
+    display: none;
+  }
+  .calc-panel.calc-off .calc-opacity-btn {
+    display: block;
+    opacity: 1;
   }
 
   .calc-inner { height: auto; }

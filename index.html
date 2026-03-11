@@ -122,7 +122,7 @@
         <span class="screen-label">Diagnostic Test</span>
         <span id="diag-counter" class="counter-pill">1 / 15</span>
       </div>
-      <div style="width:80px"></div>
+      <span id="diag-timer" class="counter-pill">20:00</span>
     </div>
 
     <div class="diag-prog-wrap">
@@ -137,8 +137,28 @@
       <div class="answer-row">
         <input id="diag-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
         <button class="btn-submit" onclick="submitDiag()">Submit</button>
+        <button id="hints-btn-diag" class="btn-submit btn-hints" onclick="toggleHints()">Hints</button>
       </div>
       <p id="diag-fb" class="feedback"></p>
+
+      <!-- solution sheet for diagnostics (same structure as practice) -->
+      <div class="solution-panel">
+        <div class="solution-header">
+          <span class="solution-label">Solution Sheet</span>
+          <div class="mode-toggles">
+            <button id="diag-btn-text-mode" class="btn-mode active" onclick="toggleSolutionMode('text','diag-')">Text</button>
+            <button id="diag-btn-draw-mode" class="btn-mode" onclick="toggleSolutionMode('draw','diag-')">Draw</button>
+          </div>
+          <button id="btn-undo-diag" class="btn-undo-work" onclick="undoWork('diag-')">Undo</button>
+          <button class="btn-clear-work" onclick="clearWork('diag-')">Clear</button>
+        </div>
+        <div id="diag-text-container" class="work-container active-mode">
+          <textarea id="diag-work-area" class="work-area" placeholder="Write your work and calculations here..."></textarea>
+        </div>
+        <div id="diag-canvas-container" class="canvas-container">
+          <canvas id="diag-draw-canvas" class="draw-canvas"></canvas>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -179,6 +199,7 @@
         <div class="answer-row">
           <input id="prac-inp" type="text" class="ans-input" placeholder="Your answer…" autocomplete="off">
           <button class="btn-submit" onclick="submitPractice()">Submit</button>
+          <button id="hints-btn" class="btn-submit btn-hints" onclick="toggleHints()">Hints</button>
         </div>
         <p id="prac-fb" class="feedback"></p>
       </div>
@@ -191,6 +212,7 @@
             <button id="btn-text-mode" class="btn-mode active" onclick="toggleSolutionMode('text')">Text</button>
             <button id="btn-draw-mode" class="btn-mode" onclick="toggleSolutionMode('draw')">Draw</button>
           </div>
+          <button id="btn-undo" class="btn-undo-work" onclick="undoWork()">Undo</button>
           <button class="btn-clear-work" onclick="clearWork()">Clear</button>
         </div>
         <div id="text-container" class="work-container active-mode">
@@ -260,6 +282,18 @@
     </div><!-- /prac-main -->
   </div><!-- /prac-layout -->
 </div><!-- /screen-practice -->
+
+<!-- hint sliding panel (initially hidden off-screen) -->
+<div id="hint-panel" class="hint-panel">
+  <button id="hint-close" class="hint-close" onclick="toggleHints()">×</button>
+  <div class="hint-content">
+    <div id="hint-text" class="hint-text"></div>
+    <div class="hint-nav">
+      <button id="hint-prev" class="hint-nav-btn" onclick="prevHint()">‹</button>
+      <button id="hint-next" class="hint-nav-btn" onclick="nextHint()">›</button>
+    </div>
+  </div>
+</div>
 
 <script src="script.js"></script>
 </body>
