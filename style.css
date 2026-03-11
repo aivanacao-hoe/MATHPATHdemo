@@ -88,7 +88,8 @@ body {
   padding-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1.5rem;
+  justify-content: center; /* center vertically when space permits */
 }
 
 /* scrollbar */
@@ -100,8 +101,31 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.1rem 1.25rem;
+  padding: 1.5rem 1.5rem;
+  min-height: 160px;
 }
+
+/* palette picker */
+.palette-label {
+  font-size: 0.85rem;
+  color: var(--text2);
+  margin-bottom: 0.3rem;
+}
+.palette-picker {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.palette-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+}
+.palette-swatch.selected { border-color: var(--accent); }
+
 
 /* login screen */
 #screen-login {
@@ -241,13 +265,13 @@ body {
 /* Diagnostic button */
 .btn-diag {
   width: 100%;
-  padding: 0.85rem;
+  padding: 1.2rem;
   background: var(--accent);
   color: #fff;
   border: none;
   border-radius: var(--radius);
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
@@ -343,16 +367,8 @@ body {
   flex-wrap: wrap; /* support additional control row below */
 }
 
-.calc-control-row {
-  padding: 0.5rem 1.25rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  text-align: right;
-}
-
-.calc-control-row .btn-calc-tog {
-  margin-left: auto;
-}
+/* calc control row removed since calculator is always embedded */
+.calc-control-row { display: none; }
 
 .btn-back {
   background: transparent;
@@ -447,19 +463,8 @@ body {
   gap: 0.6rem;
 }
 
-.btn-calc-tog {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
+/* toggle button hidden / unused */
+.btn-calc-tog { display: none !important; }
 
 .calc-opacity-btn {
   position: absolute;
@@ -510,7 +515,7 @@ body {
   padding-left: 1rem; /* give room before first panel */
   /* left‑align the question panel, canvas follows */
   justify-content: flex-start;
-  align-items: center;
+  align-items: stretch; /* ensure work area and canvas match height */
 }
 
 /* Question panel */
@@ -658,7 +663,8 @@ body {
   resize: none;
   outline: none;
   border-top: 1px solid var(--border);
-  min-height: 180px; /* ensure some usable vertical space */
+  border-bottom: 1px solid var(--border); /* bottom outline for typing area */
+  min-height: 360px; /* ensure some usable vertical space */
 }
 
 .work-area::placeholder {
@@ -681,7 +687,7 @@ body {
   background: var(--bg);
   border-top: 1px solid var(--border);
   overflow: hidden;
-  min-height: 180px; /* match work-area height */
+  min-height: 360px; /* match work-area height */
   padding: 0 0.5rem; /* add horizontal padding so canvas isn't flush with panel edges */
 }
 
@@ -919,8 +925,6 @@ body {
   html, body { overflow: auto; }
   .screen { height: auto; min-height: 100vh; overflow: visible; }
 
-  /* Show toggle button on mobile */
-  .btn-calc-tog { display: block; }
 
   /* Practice: stack vertically */
   .prac-main { flex-direction: column; overflow: visible; }
@@ -942,23 +946,36 @@ body {
   }
 
   .work-area {
-    max-height: 240px; /* give more vertical space on mobile */
+    max-height: 280px; /* more vertical space on narrow screens */
   }
 
   .canvas-container {
-    max-height: 240px;
+    max-height: 300px;
   }
 
-  /* Calculator slides in from bottom on mobile */
+  /* keep calculator float/draggable on mobile; scale size appropriately */
   .calc-panel {
-    position: static; /* restore normal flow */
-    cursor: default;
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid var(--border);
-    max-height: 420px;
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-    overflow: hidden;
+    position: absolute;
+    bottom: 5%;
+    right: 5%;
+    width: 80%;
+    max-width: 320px;
+    max-height: 50vh;
+    cursor: grab;
+    transition: opacity 0.3s ease;
+  }
+
+  /* when calculator is minimized we keep only the opacity toggle visible */
+  .calc-panel.calc-min {
+    width: 40px;
+    height: 40px;
+    overflow: visible;
+  }
+  .calc-panel.calc-min .calc-inner {
+    display: none;
+  }
+  .calc-panel.calc-min .calc-opacity-btn {
+    display: block;
   }
 
   .calc-panel.calc-off {

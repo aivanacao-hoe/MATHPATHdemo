@@ -10,6 +10,66 @@ let diagPasses = { arithmetic: 0, algebra: 0, geometry: 0 } // count of successf
 let hasDiag = false
 let practiceTopic = null, currentAnswer = null
 
+// ===========================
+// PALETTE / THEME
+// ===========================
+// available palettes (css var overrides)
+const PALETTES = {
+  default: {
+    '--bg': '#0c0e16',
+    '--surface': '#13151f',
+    '--accent': '#5b6ef5',
+    '--accent-h': '#7c8fff'
+  },
+  ocean: {
+    '--bg': '#06283d',
+    '--surface': '#0a1f44',
+    '--accent': '#256d85',
+    '--accent-h': '#dff6ff'
+  },
+  sunset: {
+    '--bg': '#2e001e',
+    '--surface': '#3a002a',
+    '--accent': '#ff6b6b',
+    '--accent-h': '#ffc6c6'
+  }
+}
+
+function applyPalette(name) {
+  const vars = PALETTES[name] || PALETTES.default
+  Object.keys(vars).forEach(k => {
+    document.documentElement.style.setProperty(k, vars[k])
+  })
+}
+
+function initPalettePicker() {
+  const container = document.getElementById('palette-picker')
+  if (!container) return
+  container.innerHTML = ''
+  Object.keys(PALETTES).forEach(name => {
+    const sw = document.createElement('div')
+    sw.className = 'palette-swatch'
+    sw.style.background = PALETTES[name]['--accent']
+    sw.dataset.name = name
+    sw.addEventListener('click', () => selectPalette(name))
+    container.appendChild(sw)
+  })
+  markSelectedPalette()
+  applyPalette(palette) // apply existing choice when picker created
+}
+
+function markSelectedPalette() {
+  const sws = document.querySelectorAll('.palette-swatch')
+  sws.forEach(s => s.classList.toggle('selected', s.dataset.name === palette))
+}
+
+function selectPalette(name) {
+  palette = name
+  applyPalette(name)
+  markSelectedPalette()
+  if (auth && auth.currentUser) saveProgress(auth.currentUser.uid)
+}
+
 
 // ===========================
 // ROUTING
@@ -24,10 +84,10 @@ function goHome() {
     // optionally load fresh progress
     loadProgress(auth.currentUser.uid)
       .then(() => {
-        showScreen('screen-home'); renderDashboard()
+        showScreen('screen-home'); renderDashboard(); initPalettePicker()
       })
   } else {
-    showScreen('screen-home'); renderDashboard()
+    showScreen('screen-home'); renderDashboard(); initPalettePicker()
   }
 }
 
@@ -138,18 +198,10 @@ function goToPractice(topic) {
   updatePracticeMeta()
   nextQ()
   showScreen('screen-practice')
-  
-  // Calculator only visible for algebra and geometry, not arithmetic
-  const calcTog = document.getElementById('calc-tog')
-  if (topic === 'arithmetic') {
-    hideCalc()
-    if (calcTog) calcTog.style.display = 'none'
-  } else {
-    if (calcTog) calcTog.style.display = 'block'
-    // On mobile, hide calc by default; on desktop show it
-    if (window.innerWidth < 768) hideCalc()
-    else showCalcPanel()
-  }
+
+  // calculator is shown only for algebra/geometry
+  if (topic === 'arithmetic') hideCalc()
+  else showCalcPanel()
 }
 
 function updatePracticeMeta() {
@@ -230,21 +282,25 @@ function submitPractice() {
 // CALCULATOR TOGGLE
 // ===========================
 function hideCalc() {
-  document.getElementById('calc-panel').classList.add('calc-off')
-  document.getElementById('calc-tog').textContent = '🧮  Show Calculator'
+  const panel = document.getElementById('calc-panel')
+  if (!panel) return
+  panel.classList.add('calc-min')
+  panel.classList.remove('calc-off')
+  // make sure opacity button remains visible even when minimized
+  const opbtn = document.getElementById('calc-opacity-tog')
+  if (opbtn) opbtn.style.display = 'block'
 }
+
 function showCalcPanel() {
   const panel = document.getElementById('calc-panel')
-  panel.classList.remove('calc-off')
+  panel.classList.remove('calc-min')
   // ensure opacity full when displayed
   panel.style.opacity = '1'
   calcOpaque = true
-  document.getElementById('calc-tog').textContent = '✕  Hide Calculator'
-  // show opacity button and reset its icon
+  // reset opacity button icon
   const opbtn = document.getElementById('calc-opacity-tog')
   if (opbtn) {
-    opbtn.classList.remove('hidden')
-    opbtn.classList.add('visible')
+    opbtn.style.display = ''
     opbtn.textContent = '👁‍🗨'
   }
   // reset to default position when first opened
@@ -254,17 +310,17 @@ function showCalcPanel() {
     panel.dataset.dragInitialized = '1'
   }
 }
-function toggleCalc() {
-  const panel = document.getElementById('calc-panel')
-  if (panel.classList.contains('calc-off')) showCalcPanel()
-  else hideCalc()
-}
 
 // opacity toggle state: true means opaque
 let calcOpaque = true
 function toggleCalcOpacity() {
   const panel = document.getElementById('calc-panel')
-  if (!panel || panel.classList.contains('calc-off')) return
+  if (!panel) return
+  // if minimized, unminimize instead of toggling opacity
+  if (panel.classList.contains('calc-min')) {
+    showCalcPanel()
+    return
+  }
   calcOpaque = !calcOpaque
   panel.style.opacity = calcOpaque ? '1' : '0'
   // update button icon to indicate state
@@ -315,10 +371,9 @@ function endCalcDrag() {
 // initialize drag behavior after load
 window.addEventListener('load', () => {
   initCalcDrag()
-  // ensure calc toggle is visible
-  const togg = document.getElementById('calc-tog')
-  if (togg) togg.style.display = 'inline-block'
-
+  initPalettePicker()
+  // start with calculator hidden until a non-arithmetic topic is selected
+  hideCalc()
 })
 
 // ===========================

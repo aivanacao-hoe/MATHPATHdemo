@@ -49,6 +49,10 @@
 
     <div class="home-body">
 
+      <!-- Palette picker (for theme customization) -->
+      <div class="palette-label">Theme:</div>
+      <div id="palette-picker" class="palette-picker"></div>
+
       <!-- Mastery Panel -->
       <div class="mastery-card">
         <div class="mastery-card-title">Mastery Progress</div>
@@ -154,10 +158,7 @@
       <div class="user-info">Not logged in</div>
       <button class="logout-btn btn-back" style="display:none;">Log out</button>
     </div>
-    <!-- calculator toggle placed below header -->
-    <div class="calc-control-row">
-      <button id="calc-tog" class="btn-calc-tog" onclick="toggleCalc()">🧮  Show Calculator</button>
-    </div>
+
 
     <!-- MASTERY BAR -->
     <div class="prac-mastery">
@@ -201,7 +202,7 @@
       </div>
 
       <!-- CALCULATOR PANEL -->
-      <div id="calc-panel" class="calc-panel calc-off">
+      <div id="calc-panel" class="calc-panel">
         <!-- opacity control inside calculator -->
         <button id="calc-opacity-tog" class="calc-opacity-btn" onclick="toggleCalcOpacity()">👁‍🗨</button>
         <div class="calc-inner">

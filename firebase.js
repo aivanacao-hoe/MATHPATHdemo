@@ -39,6 +39,9 @@ function initFirebase() {
           el.classList.remove('logged-in');
         })
         logoutBtns.forEach(b => b.style.display = 'none')
+        // reset to default palette when nobody is signed in
+        palette = 'default'
+        if (typeof applyPalette === 'function') applyPalette(palette)
         showScreen('screen-login')
       }
     })
@@ -49,9 +52,12 @@ function initFirebase() {
 
 async function saveProgress(uid) {
   if (!db || !uid) return
-  const data = { mastery, diff, streak, hasDiag, diagPasses, lastUpdated: Date.now() }
+  const data = { mastery, diff, streak, hasDiag, diagPasses, lastUpdated: Date.now(), palette }
   try { await db.collection('users').doc(uid).set(data) } catch(e) { console.warn(e) }
 }
+
+// palette variable tracked globally
+let palette = 'default';
 
 async function loadProgress(uid) {
   if (!db || !uid) return
@@ -64,27 +70,54 @@ async function loadProgress(uid) {
       streak = data.streak || streak
       hasDiag = data.hasDiag || hasDiag
       diagPasses = data.diagPasses || diagPasses
+      if (data.palette) {
+        palette = data.palette
+        applyPalette(palette)
+      }
       renderDashboard()
     }
   } catch(e) { console.warn(e) }
 }
 
+
 // ===========================
 // AUTH HELPERS (login/register)
 // ===========================
 function doLogin() {
-  const email = document.getElementById('login-email').value
+  const email = document.getElementById('login-email').value.trim()
   const pass = document.getElementById('login-password').value
   const err = document.getElementById('login-error')
+  const loginBtn = document.getElementById('login-btn')
+  const regBtn = document.getElementById('register-btn')
+
+  if (err) err.textContent = ''            // wipe old message
+  if (loginBtn) loginBtn.disabled = true   // prevent double-click
+  if (regBtn) regBtn.disabled = true
+
   auth.signInWithEmailAndPassword(email, pass)
     .catch(e => { if (err) err.textContent = e.message })
+    .finally(() => {
+      if (loginBtn) loginBtn.disabled = false
+      if (regBtn) regBtn.disabled = false
+    })
 }
 function doRegister() {
-  const email = document.getElementById('login-email').value
+  const email = document.getElementById('login-email').value.trim()
   const pass = document.getElementById('login-password').value
   const err = document.getElementById('login-error')
+  const loginBtn = document.getElementById('login-btn')
+  const regBtn = document.getElementById('register-btn')
+
+  if (err) err.textContent = ''
+  if (loginBtn) loginBtn.disabled = true
+  if (regBtn) regBtn.disabled = true
+
   auth.createUserWithEmailAndPassword(email, pass)
     .catch(e => { if (err) err.textContent = e.message })
+    .finally(() => {
+      if (loginBtn) loginBtn.disabled = false
+      if (regBtn) regBtn.disabled = false
+    })
 }
 
 // wire up buttons and initialise
